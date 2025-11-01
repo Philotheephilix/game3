@@ -1,4 +1,5 @@
 import * as ex from 'excalibur';
+import * as tiled from '@excaliburjs/plugin-tiled';
 
 /**
  * Asset Resources
@@ -14,9 +15,7 @@ export const Images = {
 
 // Maps/Tilemaps
 export const Maps = {
-  // Example: Add your map files here
-  // mainMap: new ex.ImageSource('./assets/maps/main-map.png'),
-  // tilemap: new ex.TileMap('./assets/maps/tilemap.json'),
+  mineMap: new tiled.TiledResource('/src/assets/mine.tmj'),
 };
 
 // Sounds (if needed)
