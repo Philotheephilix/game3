@@ -3,26 +3,153 @@
 <html>
   <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
-    <style></style>
+    <style>
+      .section {
+        margin-top: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        background: #f9f9f9;
+      }
+      .section h2 {
+        margin-top: 0;
+      }
+      .input-group {
+        margin: 10px 0;
+      }
+      .input-group input {
+        margin-right: 10px;
+        padding: 5px;
+      }
+      button {
+        margin: 5px;
+        padding: 8px 15px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    </style>
   </head>
 
   <body>
-    <h1>Spawn and move</h1>
+    <h1>Game System</h1>
 
     <button id="controller-button">Connect</button>
 
     <div>
-      <div id="position-display" class="display">Position: (0, 0)</div>
-      <div id="moves-display" class="display">Moves remaining: 0</div>
+      <!-- Original Spawn/Move Section -->
+      <div class="section">
+        <h2>Player Movement</h2>
+        <div id="position-display" class="display">Position: (0, 0)</div>
+        <div id="moves-display" class="display">Moves remaining: 0</div>
 
-      <button id="spawn-button" disabled>Spawn</button>
-      <button id="move-random-button" disabled>Move random</button>
-      <div>
-        <button id="up-button" disabled>Up</button>
-        <button id="down-button" disabled>Down</button>
-        <button id="left-button" disabled>Left</button>
-        <button id="right-button" disabled>Right</button>
+        <button id="spawn-button" disabled>Spawn</button>
+        <button id="move-random-button" disabled>Move random</button>
+        <div>
+          <button id="up-button" disabled>Up</button>
+          <button id="down-button" disabled>Down</button>
+          <button id="left-button" disabled>Left</button>
+          <button id="right-button" disabled>Right</button>
+        </div>
       </div>
+
+      <!-- Game System Section -->
+      <div class="section">
+        <h2>Game System</h2>
+        
+        <div class="input-group">
+          <h3>Create World</h3>
+          <input type="number" id="create-world-id-input" placeholder="World ID" value="1" />
+          <button id="create-world-button" disabled>Create World</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Create Game</h3>
+          <input type="number" id="world-id-input" placeholder="World ID" value="1" />
+          <button id="create-game-button" disabled>Create Game</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Join Game</h3>
+          <input type="number" id="join-game-id-input" placeholder="Game ID" value="1" />
+          <button id="join-game-button" disabled>Join Game</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Start Game</h3>
+          <input type="number" id="start-game-id-input" placeholder="Game ID" value="1" />
+          <button id="start-game-button" disabled>Start Game</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Collect Asset</h3>
+          <input type="number" id="collect-game-id-input" placeholder="Game ID" value="1" />
+          <input type="number" id="asset-id-input" placeholder="Asset ID" value="1" />
+          <button id="collect-asset-button" disabled>Collect Asset</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Enter Safe Area</h3>
+          <input type="number" id="safe-area-game-id-input" placeholder="Game ID" value="1" />
+          <button id="enter-safe-area-button" disabled>Enter Safe Area</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Move Player</h3>
+          <input type="number" id="move-game-id-input" placeholder="Game ID" value="1" />
+          <input type="number" id="pos-x-input" placeholder="X" value="0" />
+          <input type="number" id="pos-y-input" placeholder="Y" value="0" />
+          <button id="move-player-button" disabled>Move Player</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Hit</h3>
+          <input type="number" id="hit-game-id-input" placeholder="Game ID" value="1" />
+          <input type="number" id="participant-input" placeholder="Participant (0/1)" value="0" />
+          <input type="number" id="hit-amount-input" placeholder="Damage" value="10" />
+          <button id="hit-button" disabled>Hit</button>
+        </div>
+
+        <div class="input-group">
+          <h3>End Game</h3>
+          <input type="number" id="end-game-id-input" placeholder="Game ID" value="1" />
+          <button id="end-game-button" disabled>End Game</button>
+        </div>
+      </div>
+
+      <!-- Torii Query Section -->
+      <div class="section">
+        <h2>Torii Queries</h2>
+        
+        <div class="input-group">
+          <button id="query-worlds-button" disabled>Query Worlds</button>
+        </div>
+
+        <div class="input-group">
+          <button id="query-games-button" disabled>Query All Games</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Query Collected Assets</h3>
+          <input type="number" id="query-game-id-input" placeholder="Game ID" value="1" />
+          <button id="query-collected-assets-button" disabled>Query Collected Assets</button>
+        </div>
+
+        <div class="input-group">
+          <h3>Query Permanent Assets</h3>
+          <input type="number" id="query-permanent-game-id-input" placeholder="Game ID" value="1" />
+          <button id="query-permanent-assets-button" disabled>Query Permanent Assets</button>
+        </div>
+
+        <div class="input-group">
+          <button id="query-player-assets-button" disabled>Query My Player Assets</button>
+        </div>
+
+        <pre id="torii-result-display" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px;">Query results will appear here...</pre>
+      </div>
+
       <div style="margin-top: 20px;">
         <a href="https://book.dojoengine.org/" target="_blank" rel="noopener noreferrer">Dojo Documentation</a>
       </div>
@@ -33,7 +160,7 @@
       import { init, ToriiQueryBuilder, KeysClause } from '@dojoengine/sdk';
 
       import controllerOpts from './controller.js';
-      import { initGame, updateFromEntitiesData } from './game.js';
+      import { initGame, updateFromEntitiesData, queryWorlds } from './game.js';
 
       import manifest from '../contracts/manifest_dev.json' assert { type: 'json' };
 
@@ -44,6 +171,8 @@
         revision: '1',
       };
 
+      let toriiClient = null;
+
       async function run(account) {
         const torii = await init({
           client: {
@@ -53,7 +182,12 @@
           domain: DOMAIN_SEPERATOR,
         });
 
-        initGame(account, manifest);
+        toriiClient = torii;
+
+        initGame(account, manifest, toriiClient);
+
+        // Setup Torii query button
+        // query-worlds-button is handled in initGame
 
         // Subscribe to model updates
         const [_, subscription] = await torii.subscribeEntityQuery({
@@ -86,7 +220,14 @@
 
           document.getElementById('controller-button').textContent = 'Connected';
           document.getElementById('controller-button').style.backgroundColor = '#4CAF50';
-          document.getElementById('spawn-button').disabled = false;
+          
+          // Enable all buttons
+          const buttons = document.querySelectorAll('button:disabled');
+          buttons.forEach(btn => {
+            if (btn.id !== 'controller-button') {
+              btn.disabled = false;
+            }
+          });
 
           run(account).catch((error) => {
             console.error(error);
