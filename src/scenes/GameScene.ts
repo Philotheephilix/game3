@@ -6,6 +6,7 @@ import { Projectile } from '../actors/Projectile';
 import { PlayerArrow } from '../actors/PlayerArrow';
 import { Maps, Images } from '../resources';
 import { SimpleInventoryHUD } from '../ui/SimpleInventoryHUD';
+import { HealthHUD } from '../ui/HealthHUD';
 
 /**
  * Main game scene with player and game logic
@@ -13,6 +14,7 @@ import { SimpleInventoryHUD } from '../ui/SimpleInventoryHUD';
 export class GameScene extends ex.Scene {
   private player!: Player;
   private inventoryHUD!: SimpleInventoryHUD;
+  private healthHUD!: HealthHUD;
   private coins: Coin[] = [];
   private moles: MoleEnemy[] = [];
   private projectiles: Projectile[] = [];
@@ -75,6 +77,10 @@ export class GameScene extends ex.Scene {
     this.player.setArrowCallback(
       (fromPos, direction) => this.spawnPlayerArrow(fromPos, direction)
     );
+
+    // Initialize health HUD
+    this.healthHUD = new HealthHUD();
+    this.healthHUD.initialize(this, _engine);
 
     // Initialize inventory HUD
     this.inventoryHUD = new SimpleInventoryHUD();
@@ -202,6 +208,28 @@ export class GameScene extends ex.Scene {
           }
         });
       }
+    });
+
+    // Check for enemy projectiles hitting player
+    this.projectiles.forEach(projectile => {
+      if (projectile.scene) {
+        const distance = projectile.pos.distance(this.player.pos);
+        if (distance < 16) { // Hit detection radius
+          console.log('Enemy projectile hit player!');
+          this.player.takeDamage(1);
+          projectile.kill();
+        }
+      }
+    });
+
+    // Update health HUD
+    if (this.healthHUD) {
+      this.healthHUD.updateHealth(this.player.getHealth(), this.player.getMaxHealth(), this.player.pos);
+    }
+
+    // Update mole health bar positions
+    this.moles.forEach(mole => {
+      mole.updateHealthBarPosition();
     });
   }
 

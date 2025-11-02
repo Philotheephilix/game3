@@ -12,6 +12,8 @@ export class Player extends ex.Actor {
   private lastFacingDirection: string = 'down'; // Track last facing direction for idle
   private isAttacking: boolean = false;
   private onArrowShot?: (fromPos: ex.Vector, direction: ex.Vector) => void;
+  private health: number = 200;
+  private maxHealth: number = 200;
 
   constructor(x: number, y: number) {
     super({
@@ -332,5 +334,21 @@ export class Player extends ex.Actor {
 
   setArrowCallback(callback: (fromPos: ex.Vector, direction: ex.Vector) => void): void {
     this.onArrowShot = callback;
+  }
+
+  takeDamage(amount: number): void {
+    this.health -= amount;
+    if (this.health < 0) {
+      this.health = 0;
+    }
+    console.log(`Player took ${amount} damage. Health: ${this.health}/${this.maxHealth}`);
+  }
+
+  getHealth(): number {
+    return this.health;
+  }
+
+  getMaxHealth(): number {
+    return this.maxHealth;
   }
 }

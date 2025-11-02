@@ -17,6 +17,8 @@ export class MoleEnemy extends ex.Actor {
   private getTargetPosition?: () => ex.Vector;
   private health: number = 3;
   private maxHealth: number = 3;
+  private healthBarActor!: ex.Actor;
+  private healthBarBackground!: ex.Actor;
 
   constructor(x: number, y: number) {
     super({
@@ -30,6 +32,9 @@ export class MoleEnemy extends ex.Actor {
 
   onInitialize(_engine: ex.Engine): void {
     console.log('Mole enemy initializing at', this.pos);
+    
+    // Set up health bar immediately (scene is available)
+    this.setupHealthBar();
     
     // Wait for images to load
     const loadEntering = Images.moleEntering.isLoaded()
@@ -56,6 +61,53 @@ export class MoleEnemy extends ex.Actor {
       this.setupAnimations();
       this.startEntering();
     });
+  }
+
+  private setupHealthBar(): void {
+    // Create health bar background
+    this.healthBarBackground = new ex.Actor({
+      pos: new ex.Vector(this.pos.x, this.pos.y + 20),
+      width: 24, // Smaller width
+      height: 2,
+      z: Number.MAX_SAFE_INTEGER - 4, // Just below player
+    });
+
+    const backgroundRect = new ex.Rectangle({
+      width: 24,
+      height: 2,
+      color: ex.Color.fromHex('#300000'),
+    });
+    this.healthBarBackground.graphics.add(backgroundRect);
+
+    // Create health bar fill
+    this.healthBarActor = new ex.Actor({
+      pos: new ex.Vector(this.pos.x, this.pos.y + 20),
+      width: 24,
+      height: 2,
+      z: Number.MAX_SAFE_INTEGER - 4,
+    });
+
+    // Update health bar
+    this.updateHealthBar();
+
+    // Add to scene if available
+    if (this.scene) {
+      this.scene.add(this.healthBarBackground);
+      this.scene.add(this.healthBarActor);
+    }
+  }
+
+  private updateHealthBar(): void {
+    const healthPercent = this.health / this.maxHealth;
+    const currentWidth = 24 * healthPercent;
+
+    const fillRect = new ex.Rectangle({
+      width: currentWidth,
+      height: 2,
+      color: ex.Color.Red,
+    });
+
+    this.healthBarActor.graphics.use(fillRect);
   }
 
   private setupAnimations(): void {
@@ -236,6 +288,9 @@ export class MoleEnemy extends ex.Actor {
     this.health -= damage;
     console.log(`Mole took ${damage} damage. Health: ${this.health}/${this.maxHealth}`);
     
+    // Update health bar
+    this.updateHealthBar();
+    
     if (this.health <= 0) {
       this.die();
     } else {
@@ -265,6 +320,14 @@ export class MoleEnemy extends ex.Actor {
     this.graphics.use(this.deadAnimation);
     this.deadAnimation.play();
     
+    // Remove health bars
+    if (this.healthBarActor) {
+      this.healthBarActor.kill();
+    }
+    if (this.healthBarBackground) {
+      this.healthBarBackground.kill();
+    }
+    
     // Remove after death animation
     setTimeout(() => {
       this.kill();
@@ -273,6 +336,13 @@ export class MoleEnemy extends ex.Actor {
 
   isDead(): boolean {
     return this.state === 'dead';
+  }
+
+  updateHealthBarPosition(): void {
+    if (this.healthBarActor && this.healthBarBackground) {
+      this.healthBarActor.pos = new ex.Vector(this.pos.x, this.pos.y + 20);
+      this.healthBarBackground.pos = new ex.Vector(this.pos.x, this.pos.y + 20);
+    }
   }
 
   private startLeaving(): void {
@@ -285,12 +355,16 @@ export class MoleEnemy extends ex.Actor {
     // After leaving completes, remove mole
     setTimeout(() => {
       console.log('Removing mole');
+      // Remove health bars before killing mole
+      if (this.healthBarActor) {
+        this.healthBarActor.kill();
+      }
+      if (this.healthBarBackground) {
+        this.healthBarBackground.kill();
+      }
       this.kill();
     }, 900); // 6 frames * 150ms
   }
 
-  onPreUpdate(_engine: ex.Engine, _delta: number): void {
-    // Mole doesn't move, just stays in place
-  }
 }
 

@@ -22,6 +22,7 @@ export const Images = {
   projectileGreen: new ex.ImageSource('/src/assets/sprites/projectile/Green.png'),
   playerBowAttack: new ex.ImageSource('/src/assets/character/Bow and Arrow.png'),
   arrowProjectile: new ex.ImageSource('/src/assets/character/Arrow.png'),
+  healthBars: new ex.ImageSource('/src/assets/Bars.png'),
 };
 
 // Maps/Tilemaps
