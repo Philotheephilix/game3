@@ -16,7 +16,6 @@ class Game extends ex.Engine {
       width: viewportWidth,
       height: viewportHeight,
       displayMode: ex.DisplayMode.FillScreen,
-      backgroundColor: ex.Color.fromHex('#2c3e50'),
       pixelArt: false,
       physics: {
         enabled: true,

@@ -12,6 +12,7 @@ export const Images = {
   playerRun: new ex.ImageSource('/src/assets/character/Run.png'),
   inventorySlots: new ex.ImageSource('/src/assets/character/Slots.png'),
   inventoryBar: new ex.ImageSource('/src/assets/character/invimage.png'),
+  money: new ex.ImageSource('/src/assets/Money.png'),
 };
 
 // Maps/Tilemaps
