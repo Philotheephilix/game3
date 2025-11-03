@@ -497,6 +497,46 @@ async function createGame(account: Account, manifest: Manifest, worldId: string)
   // Note: In production, you'd parse the transaction receipt to get the game_id
 }
 
+// Helper: fetch latest game id for account and world
+async function getLatestCreatedGameId(accountAddress: string, worldId: string): Promise<string | null> {
+  try {
+    const query = `
+      query GetGames {
+        diGameModels {
+          edges { node { game_id world_id participant_a participant_b } }
+        }
+      }
+    `;
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const result: GraphQLResponse = await response.json();
+    if (!result.data || !result.data.diGameModels) {
+      console.warn('[Torii] diGameModels missing or empty in response', result);
+      return null;
+    }
+    const games = result.data.diGameModels.edges.map(edge => edge.node);
+    console.log('[Torii] diGameModels total:', games.length);
+    const addr = String(accountAddress).toLowerCase();
+    const wid = String(worldId);
+    console.log('[Torii] Filter criteria -> worldId:', wid, ' account:', addr);
+    const mine = games.filter(g => String(g.world_id) === wid && typeof g.participant_a === 'string' && g.participant_a.toLowerCase() === addr);
+    console.log('[Torii] Filtered by account/world -> count:', mine.length, mine);
+    if (mine.length === 0) {
+      console.warn('[Torii] No matching games found for account/world');
+      return null;
+    }
+    const latest = mine.reduce((a,b) => (parseInt(b.game_id) > parseInt(a.game_id) ? b : a));
+    console.log('[Torii] Latest game selected:', latest);
+    return String(latest.game_id);
+  } catch (e) {
+    console.error('getLatestCreatedGameId error:', e);
+    return null;
+  }
+}
+
 async function joinGame(account: Account, manifest: Manifest, gameId: string): Promise<void> {
   const calldata = [gameId];
 
@@ -757,6 +797,47 @@ async function queryGames(_torii: ToriiClient): Promise<any> {
   }
 }
 
+// Helper: fetch a single game's status by id
+async function getGameStatus(gameId: string): Promise<number | null> {
+  try {
+    const query = `
+      query GetGames {
+        diGameModels {
+          edges { node { game_id status world_id participant_a participant_b } }
+        }
+      }
+    `;
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+    });
+    const result: GraphQLResponse = await response.json();
+    if (!result.data || !result.data.diGameModels) return null;
+    const games = result.data.diGameModels.edges.map(edge => edge.node);
+    console.log('[Torii] getGameStatus() total games:', games.length, 'queryGameId(dec)=', String(gameId));
+    const target = Number(gameId);
+    const match = games.find(g => {
+      const rawId = String(g.game_id);
+      const numericId = rawId.startsWith('0x') || rawId.startsWith('0X')
+        ? parseInt(rawId, 16)
+        : parseInt(rawId, 10);
+      return numericId === target;
+    });
+    if (!match) {
+      console.log('[Torii] getGameStatus() no match for gameId');
+      return null;
+    }
+    console.log('[Torii] getGameStatus() match:', match);
+    // status may arrive as number or string, normalize to number
+    const statusNum = typeof (match as any).status === 'string' ? parseInt((match as any).status, 10) : Number((match as any).status);
+    return Number.isFinite(statusNum) ? statusNum : null;
+  } catch (e) {
+    console.error('getGameStatus error:', e);
+    return null;
+  }
+}
+
 async function queryCollectedAssets(_torii: ToriiClient, gameId: string): Promise<any> {
   try {
     // Query all collected assets, then filter client-side
@@ -987,5 +1068,5 @@ async function queryPlayerAssets(_torii: ToriiClient, playerId: string): Promise
   }
 }
 
-export { initGame, updateFromEntitiesData, queryWorlds };
+export { initGame, updateFromEntitiesData, queryWorlds, createGame, joinGame, startGame, getLatestCreatedGameId, getGameStatus };
 

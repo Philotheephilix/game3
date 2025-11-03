@@ -126,6 +126,56 @@
             background: linear-gradient(to bottom, #c084fc, #9333ea);
         }
 
+        /* Modal */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+        .modal {
+            background: rgba(20, 20, 20, 0.95);
+            border: 4px solid #1a1a1a;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 420px;
+            color: #fff;
+            box-shadow: 0 12px 24px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .modal h2 {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 20px;
+            margin-bottom: 16px;
+            text-shadow: 3px 3px 0px rgba(0,0,0,0.8);
+        }
+        .modal .input-row {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 12px 0 20px;
+        }
+        .modal input[type="number"],
+        .modal input[type="text"] {
+            padding: 12px 14px;
+            border: 3px solid #1a1a1a;
+            border-radius: 8px;
+            background: #111;
+            color: #fff;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 12px;
+            outline: none;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 32px;
@@ -158,29 +208,136 @@
             <button class="pixel-button btn-join" id="join-btn">JOIN</button>
             <button class="pixel-button btn-leaderboard" id="leaderboard-btn">LEADERBOARD</button>
         </div>
+
+        <!-- Create Game Modal -->
+        <div class="modal-backdrop" id="create-game-backdrop">
+            <div class="modal">
+                <h2>CREATE GAME</h2>
+                <p class="subtitle" style="margin-top:4px;">CHOOSE A MAP</p>
+                <div class="input-row" style="gap:16px;">
+                    <div id="map-card-1" style="cursor:pointer; border:4px solid #1a1a1a; border-radius:12px; padding:0; text-align:left; background:#111; overflow:hidden;">
+                        <div style="width:100%; height:160px; background:#000; display:flex; align-items:center; justify-content:center;">
+                            <img src="/training_map.png" alt="Training Map" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                        </div>
+                        <div style="padding:16px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span style="font-family: 'Press Start 2P', cursive; font-size:14px;">TRAINING MAP</span>
+                                <span style="font-size:10px; opacity:.8;">ID: 1</span>
+                            </div>
+                            <p style="margin-top:10px; font-size:11px; line-height:1.6; opacity:.95;">
+                                Collect coins, defeat monster worms, and harvest crops. Great to learn controls.
+                            </p>
+                        </div>
+                    </div>
+                    <div id="map-card-2" style="cursor:pointer; border:4px solid #1a1a1a; border-radius:12px; padding:0; text-align:left; background:#111; overflow:hidden;">
+                        <div style="width:100%; height:160px; background:#000; display:flex; align-items:center; justify-content:center;">
+                            <img src="/time_challenge.png" alt="Time Challenge" style="width:100%; height:100%; object-fit:cover; display:block;" />
+                        </div>
+                        <div style="padding:16px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <span style="font-family: 'Press Start 2P', cursive; font-size:14px;">TIME CHALLENGE</span>
+                                <span style="font-size:10px; opacity:.8;">ID: 2</span>
+                            </div>
+                            <p style="margin-top:10px; font-size:11px; line-height:1.6; opacity:.95;">
+                                Full game: level design, harvesting, enemies, scoring against the clock.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="pixel-button btn-play" id="create-game-confirm" disabled>CREATE GAME</button>
+                    <button class="pixel-button btn-leaderboard" id="create-game-cancel">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Start Game Modal -->
+        <div class="modal-backdrop" id="start-game-backdrop">
+            <div class="modal">
+                <h2>START GAME</h2>
+                <p class="subtitle" style="margin-top:4px;">ENTER GAME ID</p>
+                <div class="input-row">
+                    <input id="start-game-id-input" type="number" placeholder="Game ID" value="" />
+                </div>
+                <div class="modal-actions">
+                    <button class="pixel-button btn-play" id="start-game-confirm">START GAME</button>
+                    <button class="pixel-button btn-leaderboard" id="start-game-cancel">CANCEL</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Game Modal -->
+        <div class="modal-backdrop" id="join-game-backdrop">
+            <div class="modal">
+                <h2>JOIN GAME</h2>
+                <p class="subtitle" style="margin-top:4px;">ENTER GAME ID</p>
+                <div class="input-row">
+                    <input id="join-game-id-input" type="number" placeholder="Game ID" value="" />
+                </div>
+                <div class="modal-actions">
+                    <button class="pixel-button btn-join" id="join-game-confirm">JOIN</button>
+                    <button class="pixel-button btn-leaderboard" id="join-game-cancel">CANCEL</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script type="module">
         import Controller from '@cartridge/controller';
         import controllerOpts from './controller.ts';
+        import manifest from './contracts/manifest_dev.json' assert { type: 'json' };
+        import { createGame, joinGame, startGame, getLatestCreatedGameId, getGameStatus } from './cartridge-game.ts';
 
         let gameStarted = false;
         let game = null;
         const controller = new Controller(controllerOpts);
         
-        async function handlePlayGame() {
-            console.log('Play Game button clicked');
-            
-            // Hide the home screen
-            document.querySelector('.container').style.display = 'none';
-            document.querySelector('.background').style.display = 'none';
-            
-            // Start the game
-            if (!gameStarted) {
-                const gameModule = await import('./src/game.ts');
-                game = await gameModule.createAndStartGame();
-                gameStarted = true;
+        let statusPollInterval = null;
+
+        function startStatusPolling(gameId) {
+            stopStatusPolling();
+            if (!gameId) return;
+            const pollOnce = async () => {
+                try {
+                    const status = await getGameStatus(String(gameId));
+                    console.log('[UI] Poll status for gameId(dec)', String(gameId), '=>', status);
+                    // status is normalized to number; 1 means started
+                    if (status === 1) {
+                        stopStatusPolling();
+                        // enter game like before
+                        const container = document.querySelector('.container');
+                        const background = document.querySelector('.background');
+                        if (container) container.style.display = 'none';
+                        if (background) background.style.display = 'none';
+                        if (!gameStarted) {
+                            const gameModule = await import('./src/game.ts');
+                            game = await gameModule.createAndStartGame();
+                            gameStarted = true;
+                        }
+                        // close the start modal if open
+                        const startBackdrop = document.getElementById('start-game-backdrop');
+                        if (startBackdrop) startBackdrop.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error('[UI] status poll error', e);
+                }
+            };
+            // Kick off immediately, then schedule
+            pollOnce();
+            statusPollInterval = setInterval(pollOnce, 1000);
+        }
+
+        function stopStatusPolling() {
+            if (statusPollInterval) {
+                clearInterval(statusPollInterval);
+                statusPollInterval = null;
             }
+        }
+
+        async function handlePlayGame() {
+            // Open create game modal
+            const backdrop = document.getElementById('create-game-backdrop');
+            if (backdrop) backdrop.style.display = 'flex';
         }
         
         function handleButtonClick(buttonName) {
@@ -193,6 +350,16 @@
             const main = document.getElementById('main-buttons');
             if (login) login.style.display = 'none';
             if (main) main.style.display = 'flex';
+        }
+
+        function normalizeGameId(id) {
+            if (!id) return '';
+            const s = String(id);
+            if (s.startsWith('0x') || s.startsWith('0X')) {
+                try { return String(parseInt(s, 16)); } catch { return ''; }
+            }
+            if (/^\d+$/.test(s)) return s;
+            return '';
         }
 
         async function handleConnect() {
@@ -215,8 +382,164 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('connect-btn').addEventListener('click', handleConnect);
             document.getElementById('play-btn').addEventListener('click', handlePlayGame);
-            document.getElementById('join-btn').addEventListener('click', () => handleButtonClick('Join'));
+            document.getElementById('join-btn').addEventListener('click', () => {
+                const jb = document.getElementById('join-game-backdrop');
+                if (jb) jb.style.display = 'flex';
+            });
             document.getElementById('leaderboard-btn').addEventListener('click', () => handleButtonClick('Leaderboard'));
+
+            // Modal actions
+            const cancelBtn = document.getElementById('create-game-cancel');
+            const confirmBtn = document.getElementById('create-game-confirm');
+            const backdrop = document.getElementById('create-game-backdrop');
+            const mapCard1 = document.getElementById('map-card-1');
+            const mapCard2 = document.getElementById('map-card-2');
+            let selectedWorldId = '';
+
+            function selectCard(cardEl, id) {
+                selectedWorldId = id;
+                if (confirmBtn && confirmBtn instanceof HTMLButtonElement) confirmBtn.disabled = false;
+                // visual state
+                [mapCard1, mapCard2].forEach((el) => {
+                    if (!el) return;
+                    el.style.boxShadow = 'none';
+                    el.style.filter = 'none';
+                    el.style.borderColor = '#1a1a1a';
+                });
+                if (cardEl) {
+                    cardEl.style.boxShadow = '0 0 0 4px rgba(255,215,0,0.35) inset';
+                    cardEl.style.filter = 'brightness(1.06)';
+                    cardEl.style.borderColor = '#fbbf24';
+                }
+            }
+
+            mapCard1?.addEventListener('click', () => selectCard(mapCard1, '1'));
+            mapCard2?.addEventListener('click', () => selectCard(mapCard2, '2'));
+
+            cancelBtn?.addEventListener('click', () => {
+                if (backdrop) backdrop.style.display = 'none';
+            });
+
+            confirmBtn?.addEventListener('click', async () => {
+                try {
+                    const worldId = selectedWorldId;
+                    if (!worldId) {
+                        // no alerts; just shake or close silently
+                        return;
+                    }
+                    const account = await controller.connect();
+                    await createGame(account, manifest, String(worldId));
+                    if (backdrop) backdrop.style.display = 'none';
+                    // Attempt to fetch latest created game id for this account + world
+                    // and prefill both Start and Join flows.
+                    console.log('[UI] Fetching created game id for world/account');
+                    let createdGameId = await getLatestCreatedGameId(account.address, String(worldId));
+                    console.log('[UI] CreatedGameId (first try):', createdGameId);
+                    if (!createdGameId) {
+                        // Give Torii a short moment to index, then retry once
+                        await new Promise(r => setTimeout(r, 1500));
+                        createdGameId = await getLatestCreatedGameId(account.address, String(worldId));
+                        console.log('[UI] CreatedGameId (after retry):', createdGameId);
+                    }
+                    const sb = document.getElementById('start-game-backdrop');
+                    if (sb) sb.style.display = 'flex';
+                    const sgi = document.getElementById('start-game-id-input');
+                    const jgi = document.getElementById('join-game-id-input');
+                    const decId = normalizeGameId(createdGameId);
+                    if (sgi && typeof sgi === 'object' && 'value' in sgi) {
+                        sgi.value = decId;
+                        sgi.disabled = decId !== '';
+                        console.log('[UI] Set start-game-id-input:', sgi.value, 'disabled=', sgi.disabled);
+                    }
+                    if (jgi && typeof jgi === 'object' && 'value' in jgi) {
+                        jgi.value = decId;
+                        jgi.disabled = decId !== '';
+                        console.log('[UI] Set join-game-id-input:', jgi.value, 'disabled=', jgi.disabled);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+
+            // Start Game modal
+            const startCancel = document.getElementById('start-game-cancel');
+            const startConfirm = document.getElementById('start-game-confirm');
+            const startBackdrop = document.getElementById('start-game-backdrop');
+            const startInput = document.getElementById('start-game-id-input');
+            startCancel?.addEventListener('click', () => {
+                if (startBackdrop) startBackdrop.style.display = 'none';
+                stopStatusPolling();
+            });
+            startConfirm?.addEventListener('click', async () => {
+                try {
+                    const input = document.getElementById('start-game-id-input');
+                    let gameId = '';
+                    if (input && typeof input === 'object' && 'value' in input) {
+                        gameId = input.value;
+                    }
+                    if (!gameId) return;
+                    const account = await controller.connect();
+                    await startGame(account, manifest, String(gameId));
+                    // After sending start tx, verify via polling until status becomes 1
+                    startStatusPolling(gameId);
+                } catch (e) {
+                    console.error(e);
+                }
+            });
+
+            // When the Start modal is shown, begin polling immediately with current input value
+            const observer = new MutationObserver(() => {
+                if (startBackdrop && startBackdrop.style.display === 'flex' && startInput && 'value' in startInput) {
+                    const currentId = startInput.value;
+                    if (currentId) startStatusPolling(currentId);
+                }
+            });
+            if (startBackdrop) {
+                observer.observe(startBackdrop, { attributes: true, attributeFilter: ['style'] });
+            }
+
+            // Restart polling if user edits the game id while modal is open
+            startInput?.addEventListener('input', () => {
+                if (startBackdrop && startBackdrop.style.display === 'flex' && startInput && 'value' in startInput) {
+                    const currentId = startInput.value;
+                    if (currentId) startStatusPolling(currentId);
+                }
+            });
+
+            // Join Game modal
+            const joinCancel = document.getElementById('join-game-cancel');
+            const joinConfirm = document.getElementById('join-game-confirm');
+            const joinBackdrop = document.getElementById('join-game-backdrop');
+            joinCancel?.addEventListener('click', () => {
+                if (joinBackdrop) joinBackdrop.style.display = 'none';
+            });
+            joinConfirm?.addEventListener('click', async () => {
+                try {
+                    const input = document.getElementById('join-game-id-input');
+                    let gameId = '';
+                    if (input && typeof input === 'object' && 'value' in input) {
+                        gameId = input.value;
+                    }
+                    if (!gameId) return;
+                    const account = await controller.connect();
+                    await joinGame(account, manifest, String(gameId));
+                    if (joinBackdrop) joinBackdrop.style.display = 'none';
+                    // Open Start modal after successful join and prefill+disable
+                    const sb = document.getElementById('start-game-backdrop');
+                    if (sb) {
+                        const sgi = document.getElementById('start-game-id-input');
+                        if (sgi && typeof sgi === 'object' && 'value' in sgi) {
+                            sgi.value = gameId;
+                            sgi.disabled = true;
+                        }
+                        sb.style.display = 'flex';
+                        // Begin polling immediately for player 2
+                        startStatusPolling(gameId);
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            });
         });
     </script>
 </body>
