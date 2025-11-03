@@ -365,11 +365,6 @@
                         // enter game like before; keep background visible for immersive backdrop
                         const container = document.querySelector('.container');
                         if (container) container.style.display = 'none';
-                        // swap background to clouds for in-game vibe
-                        const bgEl = document.querySelector('.background');
-                        if (bgEl && bgEl instanceof HTMLElement) {
-                            bgEl.style.backgroundImage = "url('/cloud.gif')";
-                        }
                         if (!gameStarted && !gameStarting) {
                             gameStarting = true;
                             const gameModule = await import('./src/game.ts');
@@ -407,10 +402,6 @@
             try {
                 const container = document.querySelector('.container');
                 if (container) container.style.display = 'none';
-                const bgEl = document.querySelector('.background');
-                if (bgEl && bgEl instanceof HTMLElement) {
-                    bgEl.style.backgroundImage = "url('/cloud.gif')";
-                }
                 if (!gameStarted) {
                     const gameModule = await import('./src/game.ts');
                     game = await gameModule.createAndStartGame();
