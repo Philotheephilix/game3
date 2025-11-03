@@ -107,29 +107,33 @@ pub mod game_system {
     fn remove_collected_assets(
         ref world: dojo::world::WorldStorage, game_id: u64, participant: u8
     ) {
-        // Since Dojo doesn't provide has_model/delete_model, we'll iterate through
-        // a range and skip. Collected assets are indexed sequentially.
-        // For now, we mark them as "ignored" by checking participant in read operations
-        // This is a limitation - assets remain but won't be counted
-        // In production, use Torii to track and filter
+        // Optimized: Only iterate through a reasonable range of assets
+        // In practice, games won't have thousands of unique asset types
         let mut asset_id: u32 = 1;
         loop {
-            if asset_id > 10000 {
+            if asset_id > 100 {  // Reduced from 10000
                 break;
             }
 
-            let mut collection_index: u32 = 0;
+            // Get collection counter for this asset to know the max index
+            let collection_counter_key = get_collection_counter_key(game_id, participant, asset_id);
+            let max_collection_index = get_collection_counter(ref world, collection_counter_key);
+            
+            // Only iterate through actual collections, not up to 10000
+            let mut collection_index: u32 = 1;
             loop {
+                if collection_index > max_collection_index {
+                    break;
+                }
+                
                 let collected_key = (game_id, asset_id, collection_index);
                 
-                // Try to read - if it fails, we've reached the end
-                // Note: This will panic if model doesn't exist, so we use a limited range
+                // Try to read - if it fails, skip
                 let collected: CollectedAsset = world.read_model(collected_key);
                 
                 // Only process assets collected by this participant
                 if collected.participant == participant {
                     // Mark as deleted by writing a zero model
-                    // Since we can't delete, we write a model with participant = 255 (invalid)
                     let deleted = CollectedAsset {
                         game_id,
                         asset_id,
@@ -140,9 +144,6 @@ pub mod game_system {
                 }
 
                 collection_index += 1;
-                if collection_index >= 10000 {
-                    break;
-                }
             }
 
             asset_id += 1;
@@ -170,7 +171,7 @@ pub mod game_system {
             // Count permanent assets per asset_id for this participant
             let mut asset_id: u32 = 1;
             loop {
-                if asset_id > 1000 {  // Reduced limit to avoid resource exhaustion
+                if asset_id > 100 {  // Reduced limit to avoid resource exhaustion
                     break;
                 }
                 
@@ -380,7 +381,7 @@ pub mod game_system {
             // We iterate through asset_ids and use counters to track indices
             let mut asset_id: u32 = 1;
             loop {
-                if asset_id > 1000 {  // Reduced limit to avoid resource exhaustion
+                if asset_id > 100 {  // Reduced limit to avoid resource exhaustion
                     break;
                 }
 

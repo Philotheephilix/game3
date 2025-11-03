@@ -144,9 +144,8 @@ contractPolicies[VRF_PROVIDER_ADDRESS] = {
 };
 
 const controllerOpts: ControllerOpts = {
-  chains: [{ rpcUrl: 'http://localhost:5050' }],
-  // "KATANA"
-  defaultChainId: '0x4b4154414e41',
+  chains: [{ rpcUrl: 'https://api.cartridge.gg/x/starknet/sepolia' }],
+  defaultChainId: '0x534e5f5345504f4c4941',
   policies: {
     contracts: contractPolicies,
   },

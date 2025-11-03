@@ -10,6 +10,8 @@ import * as tiled from '@excaliburjs/plugin-tiled';
 export const Images = {
   playerIdle: new ex.ImageSource('/src/assets/character/Idle.png'),
   playerRun: new ex.ImageSource('/src/assets/character/Run.png'),
+  playerDamage: new ex.ImageSource('/src/assets/character/Damage.png'),
+  playerDead: new ex.ImageSource('/src/assets/character/Dead.png'),
   inventorySlots: new ex.ImageSource('/src/assets/character/Slots.png'),
   inventoryBar: new ex.ImageSource('/src/assets/character/invimage.png'),
   money: new ex.ImageSource('/src/assets/Money.png'),
@@ -22,6 +24,8 @@ export const Images = {
   projectileGreen: new ex.ImageSource('/src/assets/sprites/projectile/Green.png'),
   playerBowAttack: new ex.ImageSource('/src/assets/character/Bow and Arrow.png'),
   arrowProjectile: new ex.ImageSource('/src/assets/character/Arrow.png'),
+  playerSickle: new ex.ImageSource('/src/assets/Manu/Sickle.png'),
+  fallCrops: new ex.ImageSource('/src/assets/Farm Crops - Tiny Asset Pack/Fall Crops.png'),
   healthBars: new ex.ImageSource('/src/assets/Bars.png'),
 };
 
@@ -44,7 +48,7 @@ export const Resources = {
 };
 
 // Resource loader helper
-export const ResourceLoader = new ex.Loader();
+export const ResourceLoader = new ex.Loader({ suppressPlayButton: true });
 Object.values(Resources).forEach(resource => {
   ResourceLoader.addResource(resource);
 });

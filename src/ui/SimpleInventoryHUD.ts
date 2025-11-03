@@ -19,7 +19,7 @@ export class SimpleInventoryHUD {
   private scene!: ex.Scene;
   private selectedSlot: number = 0;
   private numSlots: number = 8;
-  private showOverlay: boolean = false; // Toggle overlay above player
+  private showOverlay: boolean = true; // Show overlay by default
   
   private inventory: (InventoryItem | null)[] = [];
   private overlaySlots: ex.Actor[] = [];
@@ -66,7 +66,7 @@ export class SimpleInventoryHUD {
         this.overlaySlots.forEach(slot => slot.graphics.visible = this.showOverlay);
         // Update item visibility based on whether they have graphics
         this.slotItems.forEach((item, i) => {
-          item.graphics.visible = this.showOverlay && this.inventory[i] !== null;
+          item.graphics.visible = this.showOverlay && this.inventory[i] !== null && this.inventory[i]!.sprite !== undefined;
         });
         // Update count visibility based on whether they have graphics
         this.slotCountActors.forEach((count, i) => {
@@ -144,6 +144,7 @@ export class SimpleInventoryHUD {
       const itemActor = new ex.Actor({
         width: slotSize - 2,
         height: slotSize - 2,
+        anchor: ex.Vector.Half, // Center anchor for proper positioning
         z: Number.MAX_SAFE_INTEGER - 1, // Between slot and highlight
       });
       itemActor.graphics.visible = false;
@@ -172,7 +173,10 @@ export class SimpleInventoryHUD {
       this.slotItems.push(itemActor);
       this.slotCountActors.push(countActor);
       this.slotCountTexts.push(countText);
-      slot.graphics.visible = false; // Initially hidden
+      slot.graphics.visible = this.showOverlay; // Use showOverlay state
+      highlight.graphics.visible = false; // Highlights only show when selected
+      itemActor.graphics.visible = false; // Will be set when items are added
+      countActor.graphics.visible = false; // Will be set when items are added
       this.overlaySlots.push(slot);
       this.scene.add(slot);
       this.scene.add(highlight);
@@ -217,7 +221,7 @@ export class SimpleInventoryHUD {
       if (this.inventory[i] === null) {
         this.inventory[i] = item;
         this.updateSlotDisplay(i);
-        console.log(`Added ${item.type} to slot ${i + 1}`);
+        console.log(`Added ${item.type} to slot ${i + 1}`, item.sprite ? 'with sprite' : 'without sprite');
         return true;
       }
     }
@@ -281,9 +285,19 @@ export class SimpleInventoryHUD {
     const countText = this.slotCountTexts[slotIndex];
     
     if (item && item.sprite) {
+      // Ensure sprite is properly scaled to fit the 14x14 inventory slot
+      const targetScale = 14 / 16;
+      if (!item.sprite.scale || 
+          Math.abs(item.sprite.scale.x - targetScale) > 0.001 || 
+          Math.abs(item.sprite.scale.y - targetScale) > 0.001) {
+        item.sprite.scale = new ex.Vector(targetScale, targetScale);
+      }
+      
+      console.log(`Updating slot ${slotIndex} with sprite:`, item.sprite, 'scale:', item.sprite.scale);
       itemActor.graphics.use(item.sprite);
       // Only show items when overlay is visible
       itemActor.graphics.visible = this.showOverlay;
+      console.log(`Slot ${slotIndex} itemActor visible:`, itemActor.graphics.visible, 'showOverlay:', this.showOverlay);
       
       // Show count if more than 1, but only if overlay is visible
       if (item.count > 1) {

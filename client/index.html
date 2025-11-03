@@ -3,7 +3,137 @@
 <html>
   <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+      
+      /* Home Screen Styles */
+      #home-screen {
+        min-height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      
+      #home-screen.hidden {
+        display: none;
+      }
+      
+      .background-container {
+        position: fixed;
+        inset: 0;
+        background-size: contain;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 100vw;
+        height: 100vh;
+        background-image: url('/harvest-heist-bg.gif');
+      }
+      
+      .content-container {
+        position: relative;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 48px;
+        padding: 16px;
+      }
+      
+      .title-container {
+        text-align: center;
+        margin-bottom: 32px;
+      }
+      
+      .title {
+        font-size: 6rem;
+        font-weight: bold;
+        color: white;
+        margin-bottom: 8px;
+        font-family: 'Press Start 2P', cursive;
+        text-shadow: 6px 6px 0px rgba(0, 0, 0, 0.9), 12px 12px 0px rgba(255, 215, 0, 0.4);
+        letter-spacing: 4px;
+      }
+      
+      .subtitle {
+        color: white;
+        margin-top: 16px;
+        font-family: 'Press Start 2P', cursive;
+        text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.8);
+        font-size: 12px;
+        letter-spacing: 2px;
+      }
+      
+      .buttons-container {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        width: 100%;
+        max-width: 384px;
+      }
+      
+      .pixel-button {
+        padding: 16px 32px;
+        width: 100%;
+        font-weight: bold;
+        color: white;
+        border: 4px solid #1f2937;
+        border-radius: 8px;
+        transition: all 150ms transform;
+        cursor: pointer;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 14px;
+        letter-spacing: 1px;
+        text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.7);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+      }
+      
+      .pixel-button:hover {
+        transform: scale(1.05) translateY(-4px);
+        filter: brightness(1.1);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5), inset 0 -4px 0 rgba(0, 0, 0, 0.4);
+      }
+      
+      .pixel-button:active {
+        transform: scale(0.95);
+      }
+      
+      .pixel-button.amber {
+        background: linear-gradient(to bottom, #fbbf24, #d97706);
+      }
+      
+      .pixel-button.green {
+        background: linear-gradient(to bottom, #4ade80, #16a34a);
+      }
+      
+      .pixel-button.purple {
+        background: linear-gradient(to bottom, #a78bfa, #9333ea);
+      }
+      
+      /* Old Styles for Game Interface */
+      #game-interface {
+        padding: 20px;
+      }
+      
+      #game-interface.hidden {
+        display: none;
+      }
+      
       .section {
         margin-top: 20px;
         padding: 15px;
@@ -30,128 +160,160 @@
         opacity: 0.5;
         cursor: not-allowed;
       }
+      
+      @media (max-width: 768px) {
+        .title {
+          font-size: 3rem;
+        }
+        .subtitle {
+          font-size: 10px;
+        }
+        .pixel-button {
+          font-size: 12px;
+        }
+      }
     </style>
   </head>
 
   <body>
-    <h1>Game System</h1>
-
-    <button id="controller-button">Connect</button>
-
-    <div>
-      <!-- Original Spawn/Move Section -->
-      <div class="section">
-        <h2>Player Movement</h2>
-        <div id="position-display" class="display">Position: (0, 0)</div>
-        <div id="moves-display" class="display">Moves remaining: 0</div>
-
-        <button id="spawn-button" disabled>Spawn</button>
-        <button id="move-random-button" disabled>Move random</button>
-        <div>
-          <button id="up-button" disabled>Up</button>
-          <button id="down-button" disabled>Down</button>
-          <button id="left-button" disabled>Left</button>
-          <button id="right-button" disabled>Right</button>
+    <!-- Home Screen -->
+    <div id="home-screen">
+      <div class="background-container"></div>
+      <div class="content-container">
+        <div class="title-container">
+          <h1 class="title">HARVEST HEIST</h1>
+          <p class="subtitle">STEAL THE CROPS</p>
         </div>
-      </div>
-
-      <!-- Game System Section -->
-      <div class="section">
-        <h2>Game System</h2>
         
-        <div class="input-group">
-          <h3>Create World</h3>
-          <input type="number" id="create-world-id-input" placeholder="World ID" value="1" />
-          <button id="create-world-button" disabled>Create World</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Create Game</h3>
-          <input type="number" id="world-id-input" placeholder="World ID" value="1" />
-          <button id="create-game-button" disabled>Create Game</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Join Game</h3>
-          <input type="number" id="join-game-id-input" placeholder="Game ID" value="1" />
-          <button id="join-game-button" disabled>Join Game</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Start Game</h3>
-          <input type="number" id="start-game-id-input" placeholder="Game ID" value="1" />
-          <button id="start-game-button" disabled>Start Game</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Collect Asset</h3>
-          <input type="number" id="collect-game-id-input" placeholder="Game ID" value="1" />
-          <input type="number" id="asset-id-input" placeholder="Asset ID" value="1" />
-          <button id="collect-asset-button" disabled>Collect Asset</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Enter Safe Area</h3>
-          <input type="number" id="safe-area-game-id-input" placeholder="Game ID" value="1" />
-          <button id="enter-safe-area-button" disabled>Enter Safe Area</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Move Player</h3>
-          <input type="number" id="move-game-id-input" placeholder="Game ID" value="1" />
-          <input type="number" id="pos-x-input" placeholder="X" value="0" />
-          <input type="number" id="pos-y-input" placeholder="Y" value="0" />
-          <button id="move-player-button" disabled>Move Player</button>
-        </div>
-
-        <div class="input-group">
-          <h3>Hit</h3>
-          <input type="number" id="hit-game-id-input" placeholder="Game ID" value="1" />
-          <input type="number" id="participant-input" placeholder="Participant (0/1)" value="0" />
-          <input type="number" id="hit-amount-input" placeholder="Damage" value="10" />
-          <button id="hit-button" disabled>Hit</button>
-        </div>
-
-        <div class="input-group">
-          <h3>End Game</h3>
-          <input type="number" id="end-game-id-input" placeholder="Game ID" value="1" />
-          <button id="end-game-button" disabled>End Game</button>
+        <div class="buttons-container">
+          <button class="pixel-button amber" id="play-game-button">PLAY GAME</button>
+          <button class="pixel-button green" id="join-button">JOIN</button>
+          <button class="pixel-button purple" id="leaderboard-button">LEADERBOARD</button>
         </div>
       </div>
+    </div>
 
-      <!-- Torii Query Section -->
-      <div class="section">
-        <h2>Torii Queries</h2>
-        
-        <div class="input-group">
-          <button id="query-worlds-button" disabled>Query Worlds</button>
+    <!-- Game Interface (hidden by default) -->
+    <div id="game-interface" class="hidden">
+      <h1>Game System</h1>
+
+      <button id="controller-button">Connect</button>
+
+      <div>
+        <!-- Original Spawn/Move Section -->
+        <div class="section">
+          <h2>Player Movement</h2>
+          <div id="position-display" class="display">Position: (0, 0)</div>
+          <div id="moves-display" class="display">Moves remaining: 0</div>
+
+          <button id="spawn-button" disabled>Spawn</button>
+          <button id="move-random-button" disabled>Move random</button>
+          <div>
+            <button id="up-button" disabled>Up</button>
+            <button id="down-button" disabled>Down</button>
+            <button id="left-button" disabled>Left</button>
+            <button id="right-button" disabled>Right</button>
+          </div>
         </div>
 
-        <div class="input-group">
-          <button id="query-games-button" disabled>Query All Games</button>
+        <!-- Game System Section -->
+        <div class="section">
+          <h2>Game System</h2>
+          
+          <div class="input-group">
+            <h3>Create World</h3>
+            <input type="number" id="create-world-id-input" placeholder="World ID" value="1" />
+            <button id="create-world-button" disabled>Create World</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Create Game</h3>
+            <input type="number" id="world-id-input" placeholder="World ID" value="1" />
+            <button id="create-game-button" disabled>Create Game</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Join Game</h3>
+            <input type="number" id="join-game-id-input" placeholder="Game ID" value="1" />
+            <button id="join-game-button" disabled>Join Game</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Start Game</h3>
+            <input type="number" id="start-game-id-input" placeholder="Game ID" value="1" />
+            <button id="start-game-button" disabled>Start Game</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Collect Asset</h3>
+            <input type="number" id="collect-game-id-input" placeholder="Game ID" value="1" />
+            <input type="number" id="asset-id-input" placeholder="Asset ID" value="1" />
+            <button id="collect-asset-button" disabled>Collect Asset</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Enter Safe Area</h3>
+            <input type="number" id="safe-area-game-id-input" placeholder="Game ID" value="1" />
+            <button id="enter-safe-area-button" disabled>Enter Safe Area</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Move Player</h3>
+            <input type="number" id="move-game-id-input" placeholder="Game ID" value="1" />
+            <input type="number" id="pos-x-input" placeholder="X" value="0" />
+            <input type="number" id="pos-y-input" placeholder="Y" value="0" />
+            <button id="move-player-button" disabled>Move Player</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Hit</h3>
+            <input type="number" id="hit-game-id-input" placeholder="Game ID" value="1" />
+            <input type="number" id="participant-input" placeholder="Participant (0/1)" value="0" />
+            <input type="number" id="hit-amount-input" placeholder="Damage" value="10" />
+            <button id="hit-button" disabled>Hit</button>
+          </div>
+
+          <div class="input-group">
+            <h3>End Game</h3>
+            <input type="number" id="end-game-id-input" placeholder="Game ID" value="1" />
+            <button id="end-game-button" disabled>End Game</button>
+          </div>
         </div>
 
-        <div class="input-group">
-          <h3>Query Collected Assets</h3>
-          <input type="number" id="query-game-id-input" placeholder="Game ID" value="1" />
-          <button id="query-collected-assets-button" disabled>Query Collected Assets</button>
+        <!-- Torii Query Section -->
+        <div class="section">
+          <h2>Torii Queries</h2>
+          
+          <div class="input-group">
+            <button id="query-worlds-button" disabled>Query Worlds</button>
+          </div>
+
+          <div class="input-group">
+            <button id="query-games-button" disabled>Query All Games</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Query Collected Assets</h3>
+            <input type="number" id="query-game-id-input" placeholder="Game ID" value="1" />
+            <button id="query-collected-assets-button" disabled>Query Collected Assets</button>
+          </div>
+
+          <div class="input-group">
+            <h3>Query Permanent Assets</h3>
+            <input type="number" id="query-permanent-game-id-input" placeholder="Game ID" value="1" />
+            <button id="query-permanent-assets-button" disabled>Query Permanent Assets</button>
+          </div>
+
+          <div class="input-group">
+            <button id="query-player-assets-button" disabled>Query My Player Assets</button>
+          </div>
+
+          <pre id="torii-result-display" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px;">Query results will appear here...</pre>
         </div>
 
-        <div class="input-group">
-          <h3>Query Permanent Assets</h3>
-          <input type="number" id="query-permanent-game-id-input" placeholder="Game ID" value="1" />
-          <button id="query-permanent-assets-button" disabled>Query Permanent Assets</button>
+        <div style="margin-top: 20px;">
+          <a href="https://book.dojoengine.org/" target="_blank" rel="noopener noreferrer">Dojo Documentation</a>
         </div>
-
-        <div class="input-group">
-          <button id="query-player-assets-button" disabled>Query My Player Assets</button>
-        </div>
-
-        <pre id="torii-result-display" style="margin-top: 10px; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; max-height: 400px; overflow: auto; font-size: 12px;">Query results will appear here...</pre>
-      </div>
-
-      <div style="margin-top: 20px;">
-        <a href="https://book.dojoengine.org/" target="_blank" rel="noopener noreferrer">Dojo Documentation</a>
       </div>
     </div>
 
@@ -177,7 +339,7 @@
         const torii = await init({
           client: {
             worldAddress: manifest.world.address,
-            toriiUrl: 'http://localhost:8080',
+            toriiUrl: 'https://api.cartridge.gg/x/harvest/torii',
           },
           domain: DOMAIN_SEPERATOR,
         });
@@ -213,6 +375,26 @@
       }
 
       const controller = new Controller(controllerOpts);
+
+      // Home screen button handlers
+      document.getElementById('play-game-button').onclick = () => {
+        document.getElementById('home-screen').classList.add('hidden');
+        document.getElementById('game-interface').classList.remove('hidden');
+        // Auto-connect when Play Game is clicked
+        document.getElementById('controller-button').click();
+      };
+
+      document.getElementById('join-button').onclick = () => {
+        console.log('Join button clicked');
+        // TODO: Implement join functionality
+        alert('Join functionality coming soon!');
+      };
+
+      document.getElementById('leaderboard-button').onclick = () => {
+        console.log('Leaderboard button clicked');
+        // TODO: Implement leaderboard functionality
+        alert('Leaderboard functionality coming soon!');
+      };
 
       document.getElementById('controller-button').onclick = async () => {
         try {

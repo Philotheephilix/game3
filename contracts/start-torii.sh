@@ -115,7 +115,7 @@ done
 
 echo -e "\n${GREEN}=== Torii Running ===${NC}"
 echo -e "${BLUE}Services:${NC}"
-echo -e "  Torii GraphQL:    http://localhost:8080/graphql"
+echo -e "  Torii GraphQL:    https://api.cartridge.gg/x/harvest/torii/graphql"
 echo -e "  Torii Health:     http://localhost:8080/health"
 echo -e "  Katana RPC:       http://localhost:5050"
 echo -e "\n${BLUE}World Address:${NC}"

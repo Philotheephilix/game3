@@ -4,5 +4,9 @@ import wasm from 'vite-plugin-wasm';
 
 export default defineConfig({
   plugins: [mkcert(), wasm()],
+  server: {
+    https: true,
+    port: 5173,
+  },
 });
 

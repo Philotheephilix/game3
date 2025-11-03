@@ -42,7 +42,7 @@ echo ""
 
 # Check GraphQL endpoint
 echo -e "${YELLOW}Testing GraphQL endpoint...${NC}"
-if curl -s -X POST http://localhost:8080/graphql \
+if curl -s -X POST https://api.cartridge.gg/x/harvest/torii/graphql \
     -H "Content-Type: application/json" \
     -d '{"query":"{ __typename }"}' \
     > /dev/null 2>&1; then
@@ -98,7 +98,7 @@ echo ""
 if [ ! -z "$TORII_PIDS" ] && lsof -Pi :8080 -sTCP:LISTEN -t >/dev/null 2>&1; then
     echo -e "${GREEN}=== Torii Status: RUNNING ===${NC}"
     echo -e "\n${BLUE}Available endpoints:${NC}"
-    echo -e "  GraphQL:  http://localhost:8080/graphql"
+    echo -e "  GraphQL:  https://api.cartridge.gg/x/harvest/torii/graphql"
     echo -e "  Health:   http://localhost:8080/health"
 else
     echo -e "${RED}=== Torii Status: NOT RUNNING ===${NC}"

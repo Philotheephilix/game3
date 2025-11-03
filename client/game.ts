@@ -622,7 +622,7 @@ async function endGame(account: Account, manifest: Manifest, gameId: string): Pr
   if (!gameSystemContract) {
     throw new Error('Game system contract not found');
   }
-
+  console.log(calldata)
   const tx = await account.execute({
     contractAddress: gameSystemContract.address,
     entrypoint: 'end_game',
@@ -649,7 +649,7 @@ async function queryWorldRegistries(_torii: ToriiClient): Promise<any> {
       }
     `;
 
-    const response = await fetch('http://localhost:8080/graphql', {
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -718,7 +718,7 @@ async function queryGames(_torii: ToriiClient): Promise<any> {
       }
     `;
 
-    const response = await fetch('http://localhost:8080/graphql', {
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -776,7 +776,7 @@ async function queryCollectedAssets(_torii: ToriiClient, gameId: string): Promis
       }
     `;
 
-    const response = await fetch('http://localhost:8080/graphql', {
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -867,7 +867,7 @@ async function queryPermanentAssets(_torii: ToriiClient, gameId: string): Promis
       }
     `;
 
-    const response = await fetch('http://localhost:8080/graphql', {
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -944,7 +944,7 @@ async function queryPlayerAssets(_torii: ToriiClient, playerId: string): Promise
       }
     `;
 
-    const response = await fetch('http://localhost:8080/graphql', {
+    const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

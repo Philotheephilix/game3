@@ -1,12 +1,17 @@
 import * as ex from 'excalibur';
 import { Player } from '../actors/Player';
 import { Coin } from '../actors/Coin';
+import { Crop } from '../actors/Crop';
 import { MoleEnemy } from '../actors/MoleEnemy';
 import { Projectile } from '../actors/Projectile';
 import { PlayerArrow } from '../actors/PlayerArrow';
 import { Maps, Images } from '../resources';
 import { SimpleInventoryHUD } from '../ui/SimpleInventoryHUD';
 import { HealthHUD } from '../ui/HealthHUD';
+
+export function setGameEngine(_engine: ex.Engine) {
+  // Placeholder for future scene transitions
+}
 
 /**
  * Main game scene with player and game logic
@@ -16,10 +21,13 @@ export class GameScene extends ex.Scene {
   private inventoryHUD!: SimpleInventoryHUD;
   private healthHUD!: HealthHUD;
   private coins: Coin[] = [];
+  private crops: Crop[] = [];
   private moles: MoleEnemy[] = [];
   private projectiles: Projectile[] = [];
   private playerArrows: PlayerArrow[] = [];
   private moleSpawnTimer: number = 0;
+  private mapWidth: number = 640; // 40 tiles * 16px
+  private mapHeight: number = 320; // 20 tiles * 16px
 
   onInitialize(_engine: ex.Engine): void {
     console.log('GameScene initializing...');
@@ -33,12 +41,12 @@ export class GameScene extends ex.Scene {
       mapResource.addToScene(this);
       
       // Calculate map bounds (40 tiles wide x 20 tiles tall, 16px per tile)
-      const mapWidth = 40 * 16; // 640 pixels
-      const mapHeight = 20 * 16; // 320 pixels
+      this.mapWidth = 40 * 16; // 640 pixels
+      this.mapHeight = 20 * 16; // 320 pixels
       
       // Set up camera bounds based on map size
       this.camera.strategy.limitCameraBounds(
-        new ex.BoundingBox(0, 0, mapWidth, mapHeight)
+        new ex.BoundingBox(0, 0, this.mapWidth, this.mapHeight)
       );
       
       // Add collision physics to walls and objects layers
@@ -52,6 +60,12 @@ export class GameScene extends ex.Scene {
       mapResource.load().then(() => {
         console.log('Mine map loaded in fallback, adding to scene');
         mapResource.addToScene(this);
+        // Calculate map bounds in fallback too
+        this.mapWidth = 40 * 16; // 640 pixels
+        this.mapHeight = 20 * 16; // 320 pixels
+        this.camera.strategy.limitCameraBounds(
+          new ex.BoundingBox(0, 0, this.mapWidth, this.mapHeight)
+        );
         this.setupMapCollisions(mapResource);
       }).catch((error) => {
         console.error('Error loading mine map:', error);
@@ -78,6 +92,11 @@ export class GameScene extends ex.Scene {
       (fromPos, direction) => this.spawnPlayerArrow(fromPos, direction)
     );
 
+    // Set up sickle callback for crop harvesting
+    this.player.setSickleCallback(
+      (position) => this.handleSickleHit(position)
+    );
+
     // Initialize health HUD
     this.healthHUD = new HealthHUD();
     this.healthHUD.initialize(this, _engine);
@@ -95,6 +114,9 @@ export class GameScene extends ex.Scene {
 
     // Spawn some coins on the map
     this.spawnCoins();
+    
+    // Spawn crops on the map
+    this.spawnCrops();
   }
 
   private spawnCoins(): void {
@@ -119,6 +141,34 @@ export class GameScene extends ex.Scene {
         this.add(coin);
         this.coins.push(coin);
       });
+    });
+  }
+
+  private spawnCrops(): void {
+    // Wait for fall crops image to be loaded
+    const loadCrops = Images.fallCrops.isLoaded()
+      ? Promise.resolve()
+      : Images.fallCrops.load();
+
+    loadCrops.then(() => {
+      // Spawn crops at random positions on soil/dirt tiles
+      const cropTypes = [
+        'crop1', 'crop2', 'crop3', 'crop4', 'crop5', 'crop6',
+        'crop7', 'crop8', 'crop9', 'crop10', 'crop11', 'crop12',
+        'crop13', 'crop14', 'crop15', 'crop16', 'crop17', 'crop18'
+      ];
+
+      // Spawn 15 crops randomly
+      for (let i = 0; i < 15; i++) {
+        const randomX = Math.random() * 600 + 20; // Random x position
+        const randomY = Math.random() * 280 + 20; // Random y position
+        const randomCropType = cropTypes[Math.floor(Math.random() * cropTypes.length)];
+        
+        const crop = new Crop(randomX, randomY, randomCropType);
+        this.add(crop);
+        this.crops.push(crop);
+        // z-index is already set in Crop constructor to be above ground
+      }
     });
   }
 
@@ -166,7 +216,112 @@ export class GameScene extends ex.Scene {
     }
   }
 
+  private handleSickleHit(position: ex.Vector): void {
+    // Check crops within harvest distance (tiles are 16x16, so 24 pixels is about 1.5 tiles)
+    const harvestDistance = 24;
+    this.crops.forEach(crop => {
+      if (crop.scene) {
+        const distance = position.distance(crop.pos);
+        if (distance < harvestDistance) {
+          this.harvestCrop(crop);
+        }
+      }
+    });
+  }
+
+  private harvestCrop(crop: Crop): void {
+    console.log('harvestCrop called for crop at', crop.pos, 'cropType:', crop.getCropType());
+    // Check if crop is still in the scene
+    if (!crop.scene) {
+      console.log('Crop already harvested, returning');
+      return;
+    }
+
+    // Wait for crops image to be loaded before creating sprite
+    const cropsImage = Images.fallCrops;
+    const loadCrops = cropsImage.isLoaded()
+      ? Promise.resolve()
+      : cropsImage.load();
+
+    loadCrops.then(() => {
+      console.log('Fall crops image loaded, creating sprite');
+      
+      // Create sprite for inventory using the crop's type
+      const spriteSheet = ex.SpriteSheet.fromImageSource({
+        image: cropsImage,
+        grid: {
+          rows: 6,
+          columns: 9,
+          spriteWidth: 16,
+          spriteHeight: 16,
+        },
+      });
+      
+      // Get the row for this crop type - always use frame 7 (index 6) for inventory icon
+      const cropRowMapping: { [key: string]: number } = {
+        'crop1': 0, 'crop2': 0, 'crop3': 0,
+        'crop4': 1, 'crop5': 1, 'crop6': 1,
+        'crop7': 2, 'crop8': 2, 'crop9': 2,
+        'crop10': 3, 'crop11': 3, 'crop12': 3,
+        'crop13': 4, 'crop14': 4, 'crop15': 4,
+        'crop16': 5, 'crop17': 5, 'crop18': 5,
+      };
+
+      const rowIndex = cropRowMapping[crop.getCropType()];
+      console.log('Row index for', crop.getCropType(), ':', rowIndex);
+      
+      if (rowIndex !== undefined) {
+        // Always use frame 6 (index 5, the 6th frame) for inventory icon
+        const inventoryIconColumn = 5; // Frame 6 (0-based index 5)
+        const cropSprite = spriteSheet.getSprite(inventoryIconColumn, rowIndex);
+        console.log('Crop sprite created:', cropSprite ? 'success' : 'failed', 'at column', inventoryIconColumn, 'row', rowIndex);
+
+        // Add to inventory
+        if (cropSprite) {
+          // Clone the sprite so each crop type has its own instance
+          // This prevents sprite sharing issues when multiple crop types are harvested
+          const clonedSprite = cropSprite.clone();
+          
+          // Scale sprite to fit inventory slot (slots are 14x14, sprite is 16x16)
+          clonedSprite.scale = new ex.Vector(14 / 16, 14 / 16); // Scale down to fit
+          
+          // Use the specific crop type as the inventory item type so each crop type has its own slot
+          const cropType = crop.getCropType();
+          console.log('Adding crop to inventory:', cropType, 'with sprite:', clonedSprite);
+          
+          const success = this.inventoryHUD.addItem({
+            type: cropType, // e.g., 'crop1', 'crop2', etc.
+            sprite: clonedSprite,
+            count: 1,
+          });
+
+          console.log('AddItem result:', success ? 'success' : 'failed');
+
+          if (success) {
+            // Remove crop from scene
+            crop.kill();
+            console.log('Crop harvested successfully!');
+          } else {
+            console.log('Failed to add crop to inventory - inventory full?');
+          }
+        } else {
+          console.log('Failed to create crop sprite - sprite is null');
+        }
+      } else {
+        console.log('Failed to find row index for crop type:', crop.getCropType());
+      }
+    }).catch((error) => {
+      console.error('Error loading fall crops image:', error);
+    });
+  }
+
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    // Clamp player position to map bounds
+    // Player is 16x16, so we need to keep at least 8px from edges (half the width/height)
+    const playerHalfSize = 8;
+    this.player.pos.x = Math.max(playerHalfSize, Math.min(this.mapWidth - playerHalfSize, this.player.pos.x));
+    this.player.pos.y = Math.max(playerHalfSize, Math.min(this.mapHeight - playerHalfSize, this.player.pos.y));
+
     // Check for coin collection by distance
     const pickupDistance = 20; // pixels
     this.coins.forEach(coin => {
@@ -193,6 +348,9 @@ export class GameScene extends ex.Scene {
     
     // Clean up dead player arrows
     this.playerArrows = this.playerArrows.filter(arrow => arrow.scene);
+    
+    // Clean up dead crops
+    this.crops = this.crops.filter(crop => crop.scene);
     
     // Check for arrow hitting moles
     this.playerArrows.forEach(arrow => {
