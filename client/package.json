@@ -1,17 +1,16 @@
 {
-  "name": "client",
+  "name": "game3",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Game built with Excalibur and Dojo",
+  "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "format": "prettier --write ."
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "packageManager": "pnpm@10.15.1",
   "dependencies": {
+    "@excaliburjs/plugin-tiled": "^0.31.0",
+    "excalibur": "^0.31.0",
     "@cartridge/controller": "^0.10.5",
     "@dojoengine/core": "1.7.1",
     "@dojoengine/sdk": "^1.7.2",
@@ -19,8 +18,9 @@
     "starknet": "^8.5.2"
   },
   "devDependencies": {
-    "prettier": "^3.6.2",
-    "vite": "^7.1.4",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
     "vite-plugin-mkcert": "^1.17.8",
     "vite-plugin-wasm": "^3.5.0"
   }

@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
-import mkcert from 'vite-plugin-mkcert';
-import wasm from 'vite-plugin-wasm';
 
 export default defineConfig({
-  plugins: [mkcert(), wasm()],
   server: {
-    https: true,
-    port: 5173,
+    port: 3000,
+    open: true
   },
+  build: {
+    outDir: 'dist',
+    sourcemap: true
+  }
 });
-

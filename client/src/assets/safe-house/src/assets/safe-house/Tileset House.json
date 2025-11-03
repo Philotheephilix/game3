@@ -1,0 +1,16 @@
+{
+  "columns": 36,
+  "firstgid": 1,
+  "image": "Tileset House.png",
+  "imageheight": 720,
+  "imagewidth": 576,
+  "margin": 0,
+  "name": "Tileset House",
+  "spacing": 0,
+  "tilecount": 1620,
+  "tileheight": 16,
+  "tilewidth": 16,
+  "type": "tileset",
+  "version": "1.10",
+  "tiledversion": "1.11.2"
+}
