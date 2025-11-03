@@ -45,6 +45,12 @@ export class GameScene extends ex.Scene {
   private warningTextActor!: ex.Actor;
   private warningShadowActor!: ex.Actor; // Shadow actor for warning
   private hasShownWarning: boolean = false;
+  private safeAreaMenuOpen: boolean = false;
+  private lastSafeAreaCheck: number = 0;
+  private safeAreaMarker!: ex.Actor;
+  private safeAreaLabel!: ex.Actor;
+  private safeAreaPulseScale: number = 1.0;
+  private safeAreaPulseDirection: number = 1;
 
   onInitialize(_engine: ex.Engine): void {
     console.log('GameScene initializing...');
@@ -137,6 +143,9 @@ export class GameScene extends ex.Scene {
     
     // Setup timer UI
     this.setupTimerUI(_engine);
+    
+    // Setup safe area marker
+    this.setupSafeAreaMarker();
     
     // Get time limit from upgrade menu (or use default)
     const stats = getPlayerStats();
@@ -563,8 +572,8 @@ export class GameScene extends ex.Scene {
         const isInDoorArea = playerX >= doorLeft && playerX <= doorRight && 
                             playerY >= doorTop && playerY <= doorBottom;
         
-        // Distance check - 50px range (reasonable for "near" the door)
-        const doorTriggerDistance = 50;
+        // Distance check - 100px range (reasonable for "near" the door)
+        const doorTriggerDistance = 100;
         
         // Debug logging every few frames (throttle to avoid spam)
         if (Math.random() < 0.05) { // 5% chance per frame
@@ -573,48 +582,82 @@ export class GameScene extends ex.Scene {
         
         // Trigger when near the door - use OR logic so either condition works
         if (isInDoorArea || distanceToDoorCenter < doorTriggerDistance) {
-      console.log('[DOOR] Opening upgrade menu!');
-      console.log(`[DOOR] Player position: (${this.player.pos.x.toFixed(1)}, ${this.player.pos.y.toFixed(1)})`);
-      console.log(`[DOOR] Door position: (${doorAreaCenter.x.toFixed(1)}, ${doorAreaCenter.y.toFixed(1)})`);
-      console.log(`[DOOR] Distance: ${distanceToDoorCenter.toFixed(1)}`);
+      const currentTime = Date.now();
       
-      // Count coins from inventory (accessing private inventory array)
-      let coinCount = 0;
-      const inventory = (this.inventoryHUD as any).inventory;
-      if (inventory) {
-        for (let i = 0; i < inventory.length; i++) {
-          const item = inventory[i];
-          if (item && item.type === 'coin') {
-            coinCount += item.count || 0;
+      // Only trigger once per 2 seconds to avoid spam (but check every frame)
+      const shouldTrigger = !this.safeAreaMenuOpen && (currentTime - this.lastSafeAreaCheck) > 2000;
+      
+      if (shouldTrigger) {
+        this.safeAreaMenuOpen = true;
+        this.lastSafeAreaCheck = currentTime;
+        
+        console.log('[DOOR] Player near safe area door!');
+        console.log(`[DOOR] Player position: (${this.player.pos.x.toFixed(1)}, ${this.player.pos.y.toFixed(1)})`);
+        console.log(`[DOOR] Door position: (${doorAreaCenter.x.toFixed(1)}, ${doorAreaCenter.y.toFixed(1)})`);
+        console.log(`[DOOR] Distance: ${distanceToDoorCenter.toFixed(1)}`);
+        console.log(`[DOOR] Trigger distance: ${doorTriggerDistance}, InArea: ${isInDoorArea}`);
+        
+        // Count coins from inventory (accessing private inventory array)
+        let coinCount = 0;
+        const inventory = (this.inventoryHUD as any).inventory;
+        if (inventory) {
+          for (let i = 0; i < inventory.length; i++) {
+            const item = inventory[i];
+            if (item && item.type === 'coin') {
+              coinCount += item.count || 0;
+            }
+          }
+        }
+        console.log(`[DOOR] Coin count: ${coinCount}`);
+        
+        // Get player stats
+        const maxHealth = this.player.getMaxHealth();
+        const attack = this.player.getAttack();
+        const stamina = this.player.getStamina();
+        console.log(`[DOOR] Player stats - Health: ${maxHealth}, Attack: ${attack}, Stamina: ${stamina}`);
+        
+        // Set player stats for upgrade menu
+        setPlayerStats(coinCount, maxHealth, attack, stamina, this.inventoryHUD);
+        
+        // Transition to upgrade menu scene
+        const engine = gameEngine || this.engine || _engine;
+        console.log(`[DOOR] Engine reference: ${engine ? 'FOUND' : 'MISSING'}`);
+        if (engine) {
+          try {
+            console.log(`[DOOR] Attempting to goToScene('upgrade')...`);
+            engine.goToScene('upgrade');
+            console.log(`[DOOR] goToScene('upgrade') called successfully`);
+          } catch (error) {
+            console.error('[DOOR] Error transitioning to upgrade menu:', error);
+            console.error('[DOOR] Error stack:', (error as Error).stack);
+          }
+        } else {
+          console.error('[DOOR] No engine reference available!');
+        }
+        
+        // Also send message to HTML to open safe area menu (optional, can be used for web UI)
+        if (typeof window !== 'undefined') {
+          // Get current game ID (you may need to adjust this based on how game ID is stored)
+          const gameId = '1'; // Default, you might want to get this from somewhere
+          window.postMessage({ type: 'OPEN_SAFE_AREA', gameId: gameId }, '*');
+          
+          // Also try calling a function directly if it exists
+          if ((window as any).openSafeAreaMenu) {
+            try {
+              (window as any).openSafeAreaMenu(gameId);
+            } catch (error) {
+              console.error('[DOOR] Error calling openSafeAreaMenu:', error);
+            }
           }
         }
       }
-      console.log(`[DOOR] Coin count: ${coinCount}`);
       
-      // Get player stats
-      const maxHealth = this.player.getMaxHealth();
-      const attack = this.player.getAttack();
-      const stamina = this.player.getStamina();
-      console.log(`[DOOR] Player stats - Health: ${maxHealth}, Attack: ${attack}, Stamina: ${stamina}`);
-      
-      // Set player stats for upgrade menu
-      setPlayerStats(coinCount, maxHealth, attack, stamina, this.inventoryHUD);
-      
-      const engine = gameEngine || this.engine || _engine;
-      console.log(`[DOOR] Engine reference: ${engine ? 'FOUND' : 'MISSING'}`);
-      if (engine) {
-        try {
-          console.log(`[DOOR] Attempting to goToScene('upgrade')...`);
-          engine.goToScene('upgrade');
-          console.log(`[DOOR] goToScene('upgrade') called successfully`);
-        } catch (error) {
-          console.error('[DOOR] Error transitioning to upgrade menu:', error);
-          console.error('[DOOR] Error stack:', (error as Error).stack);
-        }
-      } else {
-        console.error('[DOOR] No engine reference available!');
-      }
       return;
+    } else {
+      // Player moved away from door, reset flag
+      if (this.safeAreaMenuOpen) {
+        this.safeAreaMenuOpen = false;
+      }
     }
 
     // Check for coin collection by distance
@@ -684,6 +727,17 @@ export class GameScene extends ex.Scene {
     this.moles.forEach(mole => {
       mole.updateHealthBarPosition();
     });
+
+    // Animate safe area marker pulse
+    if (this.safeAreaMarker) {
+      this.safeAreaPulseScale += this.safeAreaPulseDirection * 0.02;
+      if (this.safeAreaPulseScale >= 1.3) {
+        this.safeAreaPulseDirection = -1;
+      } else if (this.safeAreaPulseScale <= 1.0) {
+        this.safeAreaPulseDirection = 1;
+      }
+      this.safeAreaMarker.scale = new ex.Vector(this.safeAreaPulseScale, this.safeAreaPulseScale);
+    }
 
     // Check if player is dead and handle restart input
     if (this.player && this.player.isPlayerDead()) {
@@ -1214,6 +1268,70 @@ export class GameScene extends ex.Scene {
       const pulseScale = 1.0 + Math.sin(this.timeRemaining * 2) * 0.1; // Pulse animation
       this.warningTextActor.scale = new ex.Vector(pulseScale, pulseScale);
     }
+  }
+
+  private setupSafeAreaMarker(): void {
+    // Calculate door position (same as in door detection)
+    const doorLayerOffsetX = -8.66667;
+    const doorLayerOffsetY = 0;
+    const tileSize = 16;
+    const doorCenterX = 26.5 * tileSize + doorLayerOffsetX; // ~415.3
+    const doorCenterY = 2.5 * tileSize + doorLayerOffsetY; // ~40.0
+    
+    // Create a glowing/pulsing marker above the safe area
+    this.safeAreaMarker = new ex.Actor({
+      pos: new ex.Vector(doorCenterX, doorCenterY - 20), // Above the door
+      width: 32,
+      height: 32,
+      anchor: ex.Vector.Half,
+      z: Number.MAX_SAFE_INTEGER - 2, // Just below player but above most things
+    });
+
+    // Create a pulsing circle/indicator
+    const markerCircle = new ex.Circle({
+      radius: 16,
+      color: ex.Color.fromHex('#00FF00'), // Green
+      lineWidth: 3,
+      strokeColor: ex.Color.fromHex('#00AA00'),
+    });
+    this.safeAreaMarker.graphics.add(markerCircle);
+
+    // Add a filled circle for better visibility
+    const fillCircle = new ex.Circle({
+      radius: 12,
+      color: ex.Color.fromHex('#00FF0044'), // Semi-transparent green
+    });
+    this.safeAreaMarker.graphics.add(fillCircle);
+
+    this.add(this.safeAreaMarker);
+
+    // Create text label "SAFE AREA"
+    const labelText = new ex.Text({
+      text: 'SAFE AREA',
+      font: new ex.Font({
+        size: 8,
+        family: 'Arial',
+        color: ex.Color.White,
+        bold: true,
+      }),
+    });
+
+    this.safeAreaLabel = new ex.Actor({
+      pos: new ex.Vector(doorCenterX, doorCenterY - 40), // Above the marker
+      anchor: ex.Vector.Half,
+      z: Number.MAX_SAFE_INTEGER - 2,
+    });
+
+    // Add background for text visibility
+    const labelBg = new ex.Rectangle({
+      width: 70,
+      height: 12,
+      color: ex.Color.fromHex('#00000088'), // Semi-transparent black
+    });
+    this.safeAreaLabel.graphics.add(labelBg);
+    this.safeAreaLabel.graphics.add(labelText);
+
+    this.add(this.safeAreaLabel);
   }
   
 }

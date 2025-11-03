@@ -17,6 +17,7 @@ export class HealthHUD {
       pos: new ex.Vector(0, 0), // Will be positioned in update
       width: this.maxWidth,
       height: this.barHeight,
+      anchor: ex.Vector.Half, // Center anchor for proper positioning
       z: Number.MAX_SAFE_INTEGER, // Always on top
     });
 
@@ -32,6 +33,7 @@ export class HealthHUD {
       pos: new ex.Vector(0, 0), // Will be positioned in update
       width: this.maxWidth,
       height: this.barHeight,
+      anchor: ex.Vector.Half, // Center anchor for proper positioning
       z: Number.MAX_SAFE_INTEGER, // Always on top
     });
 
@@ -78,6 +80,12 @@ export class HealthHUD {
     const healthPercent = currentHealth / maxHealth;
     const currentWidth = this.maxWidth * healthPercent;
     
+    // Position bar under player (slightly below center) - update position first
+    const barX = playerPos.x;
+    const barY = playerPos.y + 12; // 12px below player center
+    this.backgroundActor.pos = new ex.Vector(barX, barY);
+    this.healthBarActor.pos = new ex.Vector(barX, barY);
+    
     // Create new rectangle with updated width
     const fillRect = new ex.Rectangle({
       width: currentWidth,
@@ -88,9 +96,9 @@ export class HealthHUD {
     // Use new rectangle (replaces old graphics)
     this.healthBarActor.graphics.use(fillRect);
     
-    // Position bar under player (slightly below center)
-    this.backgroundActor.pos = new ex.Vector(playerPos.x, playerPos.y + 12);
-    this.healthBarActor.pos = new ex.Vector(playerPos.x, playerPos.y + 12);
+    // Ensure actors are visible
+    this.backgroundActor.graphics.visible = true;
+    this.healthBarActor.graphics.visible = true;
   }
 }
 

@@ -2,6 +2,7 @@ import * as ex from 'excalibur';
 import { ResourceLoader } from './resources';
 import { GameScene, setGameEngine as setGameEngineForGame } from './scenes/GameScene';
 import { MainScene } from './scenes/MainScene';
+import { UpgradeMenuScene, setGameEngine as setGameEngineForUpgrade } from './scenes/UpgradeMenuScene';
 
 /**
  * Main game class
@@ -35,9 +36,11 @@ class Game extends ex.Engine {
     // Register scenes - add 'game' first so it becomes the default
     this.add('game', new GameScene());
     this.add('main', new MainScene());
+    this.add('upgrade', new UpgradeMenuScene());
     
     // Set the game engine reference for scene transitions
     setGameEngineForGame(this);
+    setGameEngineForUpgrade(this);
 
     // Start the game with the loader
     // All resources will be loaded before the game starts

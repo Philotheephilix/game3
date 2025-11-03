@@ -161,6 +161,116 @@
         cursor: not-allowed;
       }
       
+      /* Safe Area Menu Modal */
+      #safe-area-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #safe-area-modal.show {
+        display: flex;
+      }
+
+      .safe-area-content {
+        background: white;
+        padding: 24px;
+        border-radius: 8px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .safe-area-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+      }
+
+      .safe-area-header h2 {
+        margin: 0;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 18px;
+      }
+
+      .close-button {
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 10px;
+      }
+
+      .close-button:hover {
+        background: #dc2626;
+      }
+
+      .safe-area-info {
+        margin-bottom: 20px;
+        padding: 12px;
+        background: #f3f4f6;
+        border-radius: 4px;
+      }
+
+      .safe-area-assets {
+        margin-top: 20px;
+      }
+
+      .asset-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        margin-bottom: 8px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 4px;
+      }
+
+      .asset-info {
+        flex: 1;
+      }
+
+      .asset-info strong {
+        font-family: 'Press Start 2P', cursive;
+        font-size: 10px;
+      }
+
+      .secure-button {
+        background: #10b981;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: 'Press Start 2P', cursive;
+        font-size: 10px;
+      }
+
+      .secure-button:hover {
+        background: #059669;
+      }
+
+      .secure-button:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
       @media (max-width: 768px) {
         .title {
           font-size: 3rem;
@@ -317,6 +427,22 @@
       </div>
     </div>
 
+    <!-- Safe Area Menu Modal -->
+    <div id="safe-area-modal">
+      <div class="safe-area-content">
+        <div class="safe-area-header">
+          <h2>SAFE AREA</h2>
+          <button class="close-button" id="close-safe-area-modal">CLOSE</button>
+        </div>
+        <div class="safe-area-info">
+          <p>Securely store your collected assets here. Assets stored in the safe area cannot be stolen by other players.</p>
+        </div>
+        <div class="safe-area-assets" id="safe-area-assets-list">
+          <p>Loading your collected assets...</p>
+        </div>
+      </div>
+    </div>
+
     <script type="module">
       import Controller from '@cartridge/controller';
       import { init, ToriiQueryBuilder, KeysClause } from '@dojoengine/sdk';
@@ -395,6 +521,175 @@
         // TODO: Implement leaderboard functionality
         alert('Leaderboard functionality coming soon!');
       };
+
+      // Safe Area Menu Functions
+      function openSafeAreaMenu(gameId) {
+        console.log('[SAFE AREA] Opening menu for game:', gameId);
+        const modal = document.getElementById('safe-area-modal');
+        if (modal) {
+          modal.classList.add('show');
+          
+          // Load and display collected assets
+          loadSafeAreaAssets(gameId);
+        } else {
+          console.error('[SAFE AREA] Modal element not found!');
+        }
+      }
+
+      // Expose function to window so game can call it
+      window.openSafeAreaMenu = openSafeAreaMenu;
+
+      // Listen for postMessage from the game
+      window.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'OPEN_SAFE_AREA') {
+          const gameId = event.data.gameId || '1';
+          openSafeAreaMenu(gameId);
+        }
+      });
+
+      function closeSafeAreaMenu() {
+        const modal = document.getElementById('safe-area-modal');
+        if (modal) {
+          modal.classList.remove('show');
+          
+          // Notify the game that the menu was closed so it can reset the flag
+          if (typeof window !== 'undefined') {
+            window.postMessage({ type: 'CLOSE_SAFE_AREA' }, '*');
+          }
+        }
+      }
+
+      async function loadSafeAreaAssets(gameId) {
+        const assetsList = document.getElementById('safe-area-assets-list');
+        assetsList.innerHTML = '<p>Loading assets...</p>';
+        
+        try {
+          // Query collected assets for this game
+          const query = `
+            query GetCollectedAssets {
+              diCollectedAssetModels {
+                edges {
+                  node {
+                    game_id
+                    asset_id
+                    collection_index
+                    participant
+                  }
+                }
+              }
+            }
+          `;
+
+          const response = await fetch('https://api.cartridge.gg/x/harvest/torii/graphql', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ query }),
+          });
+
+          const result = await response.json();
+          
+          if (result.errors) {
+            assetsList.innerHTML = `<p style="color: red;">Error: ${result.errors.map(e => e.message).join(', ')}</p>`;
+            return;
+          }
+
+          if (!result.data || !result.data.diCollectedAssetModels) {
+            assetsList.innerHTML = '<p>No assets data available.</p>';
+            return;
+          }
+
+          // Filter assets by game_id and exclude deleted markers
+          const gameIdStr = String(gameId);
+          const allAssets = result.data.diCollectedAssetModels.edges.map(edge => edge.node);
+          const assets = allAssets.filter(asset => 
+            String(asset.game_id) === gameIdStr && asset.participant !== 255
+          );
+
+          if (assets.length === 0) {
+            assetsList.innerHTML = '<p>No collected assets found for this game.</p>';
+            return;
+          }
+
+          // Group assets by asset_id and count
+          const assetCounts = {};
+          assets.forEach(asset => {
+            if (!assetCounts[asset.asset_id]) {
+              assetCounts[asset.asset_id] = {
+                asset_id: asset.asset_id,
+                count: 0,
+                participant: asset.participant
+              };
+            }
+            assetCounts[asset.asset_id].count++;
+          });
+
+          // Display assets
+          assetsList.innerHTML = '';
+          Object.values(assetCounts).forEach(asset => {
+            const assetItem = document.createElement('div');
+            assetItem.className = 'asset-item';
+            assetItem.innerHTML = `
+              <div class="asset-info">
+                <strong>Asset ID:</strong> ${asset.asset_id}<br>
+                <span>Quantity: ${asset.count}</span>
+              </div>
+              <button class="secure-button" onclick="secureAsset('${gameId}', '${asset.asset_id}')">
+                SECURE
+              </button>
+            `;
+            assetsList.appendChild(assetItem);
+          });
+
+          // Make secureAsset function available globally
+          window.secureAsset = async function(gId, aId) {
+            // This will be called from initGame when account is available
+            console.log('Secure asset:', gId, aId);
+            alert(`Securing asset ${aId} in game ${gId}. This will call enterSafeArea.`);
+          };
+
+        } catch (error) {
+          console.error('Error loading assets:', error);
+          assetsList.innerHTML = `<p style="color: red;">Error loading assets: ${error.message}</p>`;
+        }
+      }
+
+      // Close modal handlers
+      document.getElementById('close-safe-area-modal').onclick = closeSafeAreaMenu;
+      
+      // Close modal when clicking outside
+      document.getElementById('safe-area-modal').onclick = (e) => {
+        if (e.target.id === 'safe-area-modal') {
+          closeSafeAreaMenu();
+        }
+      };
+
+      // Handler for Enter Safe Area button - open the menu
+      // Set up after DOM is ready and after initGame potentially runs
+      function setupSafeAreaButtonHandler() {
+        const enterSafeAreaButton = document.getElementById('enter-safe-area-button');
+        if (enterSafeAreaButton && !enterSafeAreaButton.hasAttribute('data-safe-area-handler')) {
+          enterSafeAreaButton.setAttribute('data-safe-area-handler', 'true');
+          
+          // Add click listener to open menu (runs first)
+          enterSafeAreaButton.addEventListener('click', function(e) {
+            if (this.disabled) return;
+            
+            const gameIdInput = document.getElementById('safe-area-game-id-input');
+            const gameId = gameIdInput?.value || '1';
+            
+            // Open the safe area menu
+            openSafeAreaMenu(gameId);
+          }, { capture: true }); // Use capture to run before other handlers
+        }
+      }
+
+      // Set up handler
+      setupSafeAreaButtonHandler();
+      
+      // Also set up after a delay to catch it if initGame modifies it
+      setTimeout(setupSafeAreaButtonHandler, 500);
 
       document.getElementById('controller-button').onclick = async () => {
         try {
