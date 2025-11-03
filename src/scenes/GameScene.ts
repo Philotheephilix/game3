@@ -8,9 +8,13 @@ import { PlayerArrow } from '../actors/PlayerArrow';
 import { Maps, Images } from '../resources';
 import { SimpleInventoryHUD } from '../ui/SimpleInventoryHUD';
 import { HealthHUD } from '../ui/HealthHUD';
+import { setPlayerStats, applyUpgrades, getPlayerStats } from './UpgradeMenuScene';
 
-export function setGameEngine(_engine: ex.Engine) {
-  // Placeholder for future scene transitions
+// Store game engine reference for scene transitions
+let gameEngine: ex.Engine | null = null;
+
+export function setGameEngine(engine: ex.Engine) {
+  gameEngine = engine;
 }
 
 /**
@@ -28,6 +32,19 @@ export class GameScene extends ex.Scene {
   private moleSpawnTimer: number = 0;
   private mapWidth: number = 640; // 40 tiles * 16px
   private mapHeight: number = 320; // 20 tiles * 16px
+  private gameOverOverlay!: ex.Actor;
+  private gameOverText!: ex.Actor;
+  private playAgainButton!: ex.Actor;
+  
+  // Timer system
+  private timeRemaining: number = 20; // seconds
+  private timeLimit: number = 20; // base time limit (can be upgraded)
+  private timerActor!: ex.Actor;
+  private timerTextActor!: ex.Actor;
+  private timerPanel!: ex.Actor; // Panel background
+  private warningTextActor!: ex.Actor;
+  private warningShadowActor!: ex.Actor; // Shadow actor for warning
+  private hasShownWarning: boolean = false;
 
   onInitialize(_engine: ex.Engine): void {
     console.log('GameScene initializing...');
@@ -117,6 +134,192 @@ export class GameScene extends ex.Scene {
     
     // Spawn crops on the map
     this.spawnCrops();
+    
+    // Setup timer UI
+    this.setupTimerUI(_engine);
+    
+    // Get time limit from upgrade menu (or use default)
+    const stats = getPlayerStats();
+    this.timeLimit = stats.timeLimit || 20;
+    this.timeRemaining = this.timeLimit;
+    this.hasShownWarning = false;
+  }
+  
+  private setupTimerUI(_engine: ex.Engine): void {
+    // Load clock image if not already loaded
+    const clockImage = Images.clock;
+    
+    const loadClock = clockImage.isLoaded()
+      ? Promise.resolve()
+      : clockImage.load();
+    
+    loadClock.then(() => {
+      // Create background panel for timer (semi-transparent black box)
+      const panelWidth = 120;
+      const panelHeight = 60;
+      
+      this.timerPanel = new ex.Actor({
+        pos: ex.Vector.Zero, // Will be updated to screen position
+        width: panelWidth,
+        height: panelHeight,
+        anchor: ex.Vector.Half,
+        z: Number.MAX_SAFE_INTEGER - 1,
+      });
+      
+      // Create panel background with rounded corners effect
+      const panelBg = new ex.Rectangle({
+        width: panelWidth,
+        height: panelHeight,
+        color: new ex.Color(0, 0, 0, 0.7), // Semi-transparent black
+        strokeColor: ex.Color.fromHex('#FFD700'), // Gold border
+      });
+      this.timerPanel.graphics.add(panelBg);
+      this.add(this.timerPanel);
+      
+      // Create clock sprite actor (smaller, inside panel)
+      const clockSprite = ex.Sprite.from(clockImage);
+      clockSprite.scale = new ex.Vector(0.4, 0.4); // Smaller scale
+      
+      this.timerActor = new ex.Actor({
+        pos: ex.Vector.Zero, // Will be updated to screen position
+        anchor: ex.Vector.Half,
+        width: clockImage.width * 0.4,
+        height: clockImage.height * 0.4,
+        z: Number.MAX_SAFE_INTEGER,
+      });
+      this.timerActor.graphics.add(clockSprite);
+      this.add(this.timerActor);
+      
+      // Create timer text actor (inside panel, right side)
+      this.timerTextActor = new ex.Actor({
+        pos: ex.Vector.Zero, // Will be updated to screen position
+        anchor: ex.Vector.Half,
+        z: Number.MAX_SAFE_INTEGER,
+      });
+      const timerText = new ex.Text({
+        text: `${Math.ceil(this.timeRemaining)}s`,
+        font: new ex.Font({
+          size: 28,
+          family: 'Arial',
+          color: ex.Color.White,
+          bold: true,
+        }),
+      });
+      this.timerTextActor.graphics.add(timerText);
+      this.add(this.timerTextActor);
+      
+      // Create warning text actor with better styling (centered, top)
+      this.warningTextActor = new ex.Actor({
+        pos: ex.Vector.Zero, // Will be updated to screen position
+        anchor: ex.Vector.Half,
+        z: Number.MAX_SAFE_INTEGER,
+      });
+      
+      // Warning background (semi-transparent red)
+      const warningBg = new ex.Rectangle({
+        width: 400,
+        height: 60,
+        color: new ex.Color(255, 0, 0, 0.8), // Semi-transparent red
+        strokeColor: ex.Color.White,
+      });
+      this.warningTextActor.graphics.add(warningBg);
+      
+      // Warning text
+      const warningText = new ex.Text({
+        text: '⚠ RETURN TO SAFE AREA! ⚠',
+        font: new ex.Font({
+          size: 36,
+          family: 'Arial',
+          color: ex.Color.White,
+          bold: true,
+        }),
+      });
+      
+      this.warningTextActor.graphics.add(warningText);
+      this.warningTextActor.graphics.visible = false;
+      this.add(this.warningTextActor);
+      
+      // Create text shadow for better visibility (as separate actor)
+      this.warningShadowActor = new ex.Actor({
+        pos: ex.Vector.Zero, // Will be updated to screen position
+        anchor: ex.Vector.Half,
+        z: Number.MAX_SAFE_INTEGER - 1,
+      });
+      const warningTextShadow = new ex.Text({
+        text: '⚠ RETURN TO SAFE AREA! ⚠',
+        font: new ex.Font({
+          size: 36,
+          family: 'Arial',
+          color: ex.Color.Black,
+          bold: true,
+        }),
+      });
+      this.warningShadowActor.graphics.add(warningTextShadow);
+      this.warningShadowActor.graphics.visible = false;
+      this.add(this.warningShadowActor);
+    });
+  }
+  
+  private updateTimerUI(_engine: ex.Engine): void {
+    if (!this.timerPanel || !this.timerActor || !this.timerTextActor) {
+      return;
+    }
+    
+    const screenWidth = _engine.drawWidth;
+    const screenHeight = _engine.drawHeight;
+    const cameraPos = this.camera.pos;
+    const zoomFactor = this.camera.zoom;
+    
+    // Timer panel position (top right corner in screen space)
+    const timerPanelScreenX = screenWidth - 70; // 70px from right edge
+    const timerPanelScreenY = 50; // 50px from top
+    
+    // Convert screen coordinates to world coordinates (accounting for camera)
+    const timerPanelWorldX = cameraPos.x + (timerPanelScreenX - screenWidth / 2) / zoomFactor;
+    const timerPanelWorldY = cameraPos.y + (timerPanelScreenY - screenHeight / 2) / zoomFactor;
+    
+    this.timerPanel.pos = new ex.Vector(timerPanelWorldX, timerPanelWorldY);
+    this.timerPanel.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor); // Scale inversely with zoom
+    
+    // Clock icon position (left side of panel)
+    const clockScreenX = timerPanelScreenX - 30;
+    const clockScreenY = timerPanelScreenY - 5;
+    const clockWorldX = cameraPos.x + (clockScreenX - screenWidth / 2) / zoomFactor;
+    const clockWorldY = cameraPos.y + (clockScreenY - screenHeight / 2) / zoomFactor;
+    
+    this.timerActor.pos = new ex.Vector(clockWorldX, clockWorldY);
+    this.timerActor.scale = new ex.Vector(0.4 / zoomFactor, 0.4 / zoomFactor);
+    
+    // Timer text position (right side of panel)
+    const textScreenX = timerPanelScreenX + 25;
+    const textScreenY = timerPanelScreenY - 5;
+    const textWorldX = cameraPos.x + (textScreenX - screenWidth / 2) / zoomFactor;
+    const textWorldY = cameraPos.y + (textScreenY - screenHeight / 2) / zoomFactor;
+    
+    this.timerTextActor.pos = new ex.Vector(textWorldX, textWorldY);
+    this.timerTextActor.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor);
+    
+    // Warning message position (top center in screen space)
+    if (this.warningTextActor) {
+      const warningScreenX = screenWidth / 2;
+      const warningScreenY = 80;
+      const warningWorldX = cameraPos.x + (warningScreenX - screenWidth / 2) / zoomFactor;
+      const warningWorldY = cameraPos.y + (warningScreenY - screenHeight / 2) / zoomFactor;
+      
+      this.warningTextActor.pos = new ex.Vector(warningWorldX, warningWorldY);
+      this.warningTextActor.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor);
+    }
+    
+    // Warning shadow position (slightly offset)
+    if (this.warningShadowActor) {
+      const shadowScreenX = screenWidth / 2 + 2;
+      const shadowScreenY = 82;
+      const shadowWorldX = cameraPos.x + (shadowScreenX - screenWidth / 2) / zoomFactor;
+      const shadowWorldY = cameraPos.y + (shadowScreenY - screenHeight / 2) / zoomFactor;
+      
+      this.warningShadowActor.pos = new ex.Vector(shadowWorldX, shadowWorldY);
+      this.warningShadowActor.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor);
+    }
   }
 
   private spawnCoins(): void {
@@ -316,11 +519,103 @@ export class GameScene extends ex.Scene {
   }
 
   onPreUpdate(_engine: ex.Engine, delta: number): void {
+    // Update timer
+    this.updateTimer(delta);
+    
+    // Update timer UI position to screen space (outside map)
+    this.updateTimerUI(_engine);
+    
     // Clamp player position to map bounds
     // Player is 16x16, so we need to keep at least 8px from edges (half the width/height)
     const playerHalfSize = 8;
     this.player.pos.x = Math.max(playerHalfSize, Math.min(this.mapWidth - playerHalfSize, this.player.pos.x));
     this.player.pos.y = Math.max(playerHalfSize, Math.min(this.mapHeight - playerHalfSize, this.player.pos.y));
+
+        // Check for door to upgrade menu
+        // Door is at tile position (26, 2-3) and (27, 2-3) in doors layer
+        const doorLayerOffsetX = -8.66667;
+        const doorLayerOffsetY = 0;
+        const tileSize = 16;
+        // Door center is more precisely calculated - door tiles are at (26,2), (27,2), (26,3), (27,3)
+        const doorCenterX = 26.5 * tileSize + doorLayerOffsetX; // ~415.3
+        const doorCenterY = 2.5 * tileSize + doorLayerOffsetY; // ~40.0
+        const doorAreaCenter = new ex.Vector(doorCenterX, doorCenterY);
+        
+        // Calculate distance from player to door center
+        const distanceToDoorCenter = this.player.pos.distance(doorAreaCenter);
+        
+        // Door dimensions
+        const doorWidth = 2 * tileSize; // 32px
+        const doorHeight = 2 * tileSize; // 32px
+        
+        // Check if player is directly at the door within a small margin
+        const playerX = this.player.pos.x;
+        const playerY = this.player.pos.y;
+        
+        // Door area: center ± half width/height + margin for player size
+        // Increased margin to 16px to make it more forgiving
+        const doorLeft = doorCenterX - doorWidth / 2 - 16; // Left edge - 16px margin
+        const doorRight = doorCenterX + doorWidth / 2 + 16; // Right edge + 16px margin
+        const doorTop = doorCenterY - doorHeight / 2 - 16; // Top edge - 16px margin
+        const doorBottom = doorCenterY + doorHeight / 2 + 16; // Bottom edge + 16px margin
+        
+        // Check if player is within the door area
+        const isInDoorArea = playerX >= doorLeft && playerX <= doorRight && 
+                            playerY >= doorTop && playerY <= doorBottom;
+        
+        // Distance check - 50px range (reasonable for "near" the door)
+        const doorTriggerDistance = 50;
+        
+        // Debug logging every few frames (throttle to avoid spam)
+        if (Math.random() < 0.05) { // 5% chance per frame
+          console.log(`[DOOR DEBUG] Player: (${playerX.toFixed(1)}, ${playerY.toFixed(1)}), Door: (${doorAreaCenter.x.toFixed(1)}, ${doorAreaCenter.y.toFixed(1)}), Distance: ${distanceToDoorCenter.toFixed(1)}, InArea: ${isInDoorArea}, DoorBounds: [${doorLeft.toFixed(1)}, ${doorRight.toFixed(1)}, ${doorTop.toFixed(1)}, ${doorBottom.toFixed(1)}]`);
+        }
+        
+        // Trigger when near the door - use OR logic so either condition works
+        if (isInDoorArea || distanceToDoorCenter < doorTriggerDistance) {
+      console.log('[DOOR] Opening upgrade menu!');
+      console.log(`[DOOR] Player position: (${this.player.pos.x.toFixed(1)}, ${this.player.pos.y.toFixed(1)})`);
+      console.log(`[DOOR] Door position: (${doorAreaCenter.x.toFixed(1)}, ${doorAreaCenter.y.toFixed(1)})`);
+      console.log(`[DOOR] Distance: ${distanceToDoorCenter.toFixed(1)}`);
+      
+      // Count coins from inventory (accessing private inventory array)
+      let coinCount = 0;
+      const inventory = (this.inventoryHUD as any).inventory;
+      if (inventory) {
+        for (let i = 0; i < inventory.length; i++) {
+          const item = inventory[i];
+          if (item && item.type === 'coin') {
+            coinCount += item.count || 0;
+          }
+        }
+      }
+      console.log(`[DOOR] Coin count: ${coinCount}`);
+      
+      // Get player stats
+      const maxHealth = this.player.getMaxHealth();
+      const attack = this.player.getAttack();
+      const stamina = this.player.getStamina();
+      console.log(`[DOOR] Player stats - Health: ${maxHealth}, Attack: ${attack}, Stamina: ${stamina}`);
+      
+      // Set player stats for upgrade menu
+      setPlayerStats(coinCount, maxHealth, attack, stamina, this.inventoryHUD);
+      
+      const engine = gameEngine || this.engine || _engine;
+      console.log(`[DOOR] Engine reference: ${engine ? 'FOUND' : 'MISSING'}`);
+      if (engine) {
+        try {
+          console.log(`[DOOR] Attempting to goToScene('upgrade')...`);
+          engine.goToScene('upgrade');
+          console.log(`[DOOR] goToScene('upgrade') called successfully`);
+        } catch (error) {
+          console.error('[DOOR] Error transitioning to upgrade menu:', error);
+          console.error('[DOOR] Error stack:', (error as Error).stack);
+        }
+      } else {
+        console.error('[DOOR] No engine reference available!');
+      }
+      return;
+    }
 
     // Check for coin collection by distance
     const pickupDistance = 20; // pixels
@@ -389,6 +684,20 @@ export class GameScene extends ex.Scene {
     this.moles.forEach(mole => {
       mole.updateHealthBarPosition();
     });
+
+    // Check if player is dead and handle restart input
+    if (this.player && this.player.isPlayerDead()) {
+      // Check both wasPressed and isHeld to catch key presses reliably
+      const enterPressed = _engine.input.keyboard.wasPressed(ex.Keys.Enter) || 
+                          _engine.input.keyboard.isHeld(ex.Keys.Enter);
+      const spacePressed = _engine.input.keyboard.wasPressed(ex.Keys.Space) || 
+                          _engine.input.keyboard.isHeld(ex.Keys.Space);
+      
+      if (enterPressed || spacePressed) {
+        console.log('[RESTART] Restart key pressed - Enter:', enterPressed, 'Space:', spacePressed);
+        this.restartGame();
+      }
+    }
   }
 
   private spawnRandomMole(): void {
@@ -480,6 +789,199 @@ export class GameScene extends ex.Scene {
     if (this.inventoryHUD) {
       this.inventoryHUD.draw(ctx, this.player);
     }
+
+    // Check if player is dead and show "Play Again" screen
+    if (this.player && this.player.isPlayerDead()) {
+      this.drawGameOverScreen(ctx);
+    }
+  }
+
+  private drawGameOverScreen(_ctx: ex.ExcaliburGraphicsContext): void {
+    if (!this.engine) return;
+    
+    const screenWidth = this.engine.drawWidth;
+    const screenHeight = this.engine.drawHeight;
+    const cameraPos = this.camera.pos;
+    const zoomFactor = this.camera.zoom;
+    
+    // Screen space positions (centered)
+    const centerScreenX = screenWidth / 2;
+    const centerScreenY = screenHeight / 2;
+    
+    // Create overlay actor if it doesn't exist (full screen, screen space)
+    if (!this.gameOverOverlay) {
+      // Overlay should cover entire screen in world space
+      const overlayWorldX = cameraPos.x;
+      const overlayWorldY = cameraPos.y;
+      const overlayWidth = screenWidth / zoomFactor;
+      const overlayHeight = screenHeight / zoomFactor;
+      
+      this.gameOverOverlay = new ex.Actor({
+        pos: new ex.Vector(overlayWorldX, overlayWorldY),
+        width: overlayWidth,
+        height: overlayHeight,
+        anchor: ex.Vector.Half,
+        z: Number.MAX_SAFE_INTEGER - 2,
+      });
+      const overlayRect = new ex.Rectangle({
+        width: overlayWidth,
+        height: overlayHeight,
+        color: new ex.Color(0, 0, 0, 0.8),
+      });
+      this.gameOverOverlay.graphics.add(overlayRect);
+      this.gameOverOverlay.scale = new ex.Vector(1, 1);
+      this.add(this.gameOverOverlay);
+    } else {
+      // Update overlay position each frame
+      const overlayWorldX = cameraPos.x;
+      const overlayWorldY = cameraPos.y;
+      const overlayWidth = screenWidth / zoomFactor;
+      const overlayHeight = screenHeight / zoomFactor;
+      this.gameOverOverlay.pos = new ex.Vector(overlayWorldX, overlayWorldY);
+      // Update overlay size by recreating rectangle
+      const newOverlayRect = new ex.Rectangle({
+        width: overlayWidth,
+        height: overlayHeight,
+        color: new ex.Color(0, 0, 0, 0.8),
+      });
+      this.gameOverOverlay.graphics.use(newOverlayRect);
+    }
+    
+    // Create play again message (small, styled like warning)
+    if (!this.playAgainButton) {
+      const messageWidth = 300;
+      const messageHeight = 50;
+      const messageScreenY = centerScreenY + 20; // Below center
+      
+      const messageWorldX = cameraPos.x + (centerScreenX - screenWidth / 2) / zoomFactor;
+      const messageWorldY = cameraPos.y + (messageScreenY - screenHeight / 2) / zoomFactor;
+      
+      this.playAgainButton = new ex.Actor({
+        pos: new ex.Vector(messageWorldX, messageWorldY),
+        anchor: ex.Vector.Half,
+        width: messageWidth,
+        height: messageHeight,
+        z: Number.MAX_SAFE_INTEGER,
+      });
+      
+      // Small background panel (like warning)
+      const messageBg = new ex.Rectangle({
+        width: messageWidth,
+        height: messageHeight,
+        color: new ex.Color(0, 150, 0, 0.8), // Semi-transparent green
+        strokeColor: ex.Color.White,
+      });
+      this.playAgainButton.graphics.add(messageBg);
+      
+      // Small text (like warning but smaller)
+      const playAgainText = new ex.Text({
+        text: 'PLAY AGAIN',
+        font: new ex.Font({
+          size: 24, // Smaller than warning (which is 36)
+          family: 'Arial',
+          color: ex.Color.White,
+          bold: true,
+        }),
+      });
+      this.playAgainButton.graphics.add(playAgainText);
+      this.playAgainButton.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor);
+      this.add(this.playAgainButton);
+    } else {
+      // Update position each frame for screen space
+      const messageScreenY = centerScreenY + 20;
+      const messageWorldX = cameraPos.x + (centerScreenX - screenWidth / 2) / zoomFactor;
+      const messageWorldY = cameraPos.y + (messageScreenY - screenHeight / 2) / zoomFactor;
+      this.playAgainButton.pos = new ex.Vector(messageWorldX, messageWorldY);
+      this.playAgainButton.scale = new ex.Vector(1 / zoomFactor, 1 / zoomFactor);
+    }
+    
+    // Hide game over text (remove it, use smaller message instead)
+    if (this.gameOverText) {
+      this.gameOverText.graphics.visible = false;
+    }
+    
+    // Show game over elements
+    this.gameOverOverlay.graphics.visible = true;
+    this.playAgainButton.graphics.visible = true;
+  }
+
+  private restartGame(): void {
+    console.log('[RESTART] Restarting game...');
+    
+    // Hide game over screen
+    if (this.gameOverOverlay) {
+      this.gameOverOverlay.graphics.visible = false;
+    }
+    if (this.gameOverText) {
+      this.gameOverText.graphics.visible = false;
+    }
+    if (this.playAgainButton) {
+      this.playAgainButton.graphics.visible = false;
+    }
+    
+    // Reset player
+    if (this.player) {
+      this.player.kill();
+    }
+    
+    // Clear all game entities
+    this.coins.forEach(coin => coin.kill());
+    this.moles.forEach(mole => mole.kill());
+    this.projectiles.forEach(proj => proj.kill());
+    this.playerArrows.forEach(arrow => arrow.kill());
+    this.crops.forEach(crop => crop.kill());
+    
+    // Clear arrays
+    this.coins = [];
+    this.moles = [];
+    this.projectiles = [];
+    this.playerArrows = [];
+    this.crops = [];
+    
+    // Reset inventory
+    if (this.inventoryHUD) {
+      const inventory = (this.inventoryHUD as any).inventory;
+      if (inventory) {
+        for (let i = 0; i < inventory.length; i++) {
+          inventory[i] = null;
+          this.inventoryHUD['updateSlotDisplay'](i);
+        }
+      }
+    }
+    
+    // Reset timer
+    const stats = getPlayerStats();
+    this.timeLimit = stats.timeLimit || 20;
+    this.timeRemaining = this.timeLimit;
+    this.hasShownWarning = false;
+    
+    // Respawn player at start position
+    this.player = new Player(48, 80);
+    this.add(this.player);
+    this.player.z = Number.MAX_SAFE_INTEGER;
+    
+    // Re-set camera to follow player
+    this.camera.strategy.lockToActor(this.player);
+    this.camera.zoom = 5; // Reset zoom
+    
+    // Set up player callbacks again
+    this.player.setArrowCallback(
+      (fromPos, direction) => this.spawnPlayerArrow(fromPos, direction)
+    );
+    this.player.setSickleCallback(
+      (position) => this.handleSickleHit(position)
+    );
+    
+    // Respawn coins
+    this.spawnCoins();
+    
+    // Respawn crops
+    this.spawnCrops();
+    
+    // Reset timers
+    this.moleSpawnTimer = 0;
+    
+    console.log('[RESTART] Game restarted successfully');
   }
 
 
@@ -535,6 +1037,22 @@ export class GameScene extends ex.Scene {
             offsetY
           );
         }
+        
+        // Add collisions to doors layer
+        const doorsLayer = mapData.layers.find((layer: any) => layer.name === 'doors');
+        if (doorsLayer && doorsLayer.data) {
+          const offsetX = doorsLayer.offsetx || 0;
+          const offsetY = doorsLayer.offsety || 0;
+          this.addCollisionsFromData(
+            doorsLayer.data, 
+            'doors', 
+            tileWidth, 
+            tileHeight, 
+            doorsLayer.width || mapWidth,
+            offsetX,
+            offsetY
+          );
+        }
       })
       .catch(error => {
         console.warn('Could not load map data for collisions:', error);
@@ -548,12 +1066,14 @@ export class GameScene extends ex.Scene {
     tileHeight: number,
     mapWidth: number,
     offsetX: number = 0,
-    offsetY: number = 0
+    offsetY: number = 0,
+    excludeTileIds: number[] = []
   ): void {
     let collisionCount = 0;
 
     tileData.forEach((tileId: number, index: number) => {
-      if (tileId !== 0) {
+      // Skip empty tiles
+      if (tileId !== 0 && !excludeTileIds.includes(tileId)) {
         // Calculate position based on tile index
         const col = index % mapWidth;
         const row = Math.floor(index / mapWidth);
@@ -586,10 +1106,114 @@ export class GameScene extends ex.Scene {
 
   onActivate(): void {
     console.log('GameScene activated');
+    
+    // Apply upgrades when returning from upgrade menu
+    if (this.player) {
+      applyUpgrades(this.player);
+    }
+    
+    // Reset timer when scene activates
+    const stats = getPlayerStats();
+    this.timeLimit = stats.timeLimit || 20;
+    this.timeRemaining = this.timeLimit;
+    this.hasShownWarning = false;
+    
+    // Hide warning when scene activates
+    if (this.warningTextActor) {
+      this.warningTextActor.graphics.visible = false;
+    }
+    if (this.warningShadowActor) {
+      this.warningShadowActor.graphics.visible = false;
+    }
   }
 
   onDeactivate(): void {
     console.log('GameScene deactivated');
+  }
+  
+  private updateTimer(delta: number): void {
+    if (!this.player || this.player.isPlayerDead()) {
+      return; // Don't update timer if player is dead
+    }
+    
+    // Convert delta from milliseconds to seconds
+    const deltaSeconds = delta / 1000;
+    
+    // Decrease timer
+    this.timeRemaining -= deltaSeconds;
+    
+    // Show warning at 10 seconds remaining
+    if (this.timeRemaining <= 10 && !this.hasShownWarning) {
+      this.hasShownWarning = true;
+      if (this.warningTextActor) {
+        this.warningTextActor.graphics.visible = true;
+      }
+      if (this.warningShadowActor) {
+        this.warningShadowActor.graphics.visible = true;
+      }
+    }
+    
+    // Hide warning if timer goes back above 10 (shouldn't happen, but just in case)
+    if (this.timeRemaining > 10 && this.hasShownWarning) {
+      this.hasShownWarning = false;
+      if (this.warningTextActor) {
+        this.warningTextActor.graphics.visible = false;
+      }
+      if (this.warningShadowActor) {
+        this.warningShadowActor.graphics.visible = false;
+      }
+    }
+    
+    // Kill player if time runs out
+    if (this.timeRemaining <= 0) {
+      this.timeRemaining = 0;
+      if (this.player && !this.player.isPlayerDead()) {
+        // Deal enough damage to kill the player
+        this.player.takeDamage(this.player.getHealth() + 1);
+      }
+      // Hide warning text when time runs out
+      if (this.warningTextActor) {
+        this.warningTextActor.graphics.visible = false;
+      }
+      if (this.warningShadowActor) {
+        this.warningShadowActor.graphics.visible = false;
+      }
+    }
+    
+    // Update timer text display
+    if (this.timerTextActor) {
+      const seconds = Math.ceil(this.timeRemaining);
+      
+      // Change color based on time remaining
+      let textColor = ex.Color.White;
+      if (this.timeRemaining <= 10) {
+        textColor = ex.Color.Red;
+      } else if (this.timeRemaining <= 15) {
+        textColor = ex.Color.fromHex('#FFA500'); // Orange
+      }
+      
+      // Recreate text with updated time and color (larger size for better visibility)
+      const newFont = new ex.Font({
+        size: 28,
+        family: 'Arial',
+        color: textColor,
+        bold: true,
+      });
+      
+      const newText = new ex.Text({
+        text: `${seconds}s`,
+        font: newFont,
+      });
+      
+      this.timerTextActor.graphics.use(newText);
+    }
+    
+    // Make warning text pulse when showing
+    if (this.warningTextActor && this.warningTextActor.graphics.visible) {
+      // Simple pulse effect - scale slightly based on time
+      const pulseScale = 1.0 + Math.sin(this.timeRemaining * 2) * 0.1; // Pulse animation
+      this.warningTextActor.scale = new ex.Vector(pulseScale, pulseScale);
+    }
   }
   
 }

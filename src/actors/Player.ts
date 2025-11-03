@@ -20,6 +20,8 @@ export class Player extends ex.Actor {
   private onSickleHit?: (position: ex.Vector) => void;
   private health: number = 200;
   private maxHealth: number = 200;
+  private attack: number = 1;
+  private stamina: number = 100;
 
   constructor(x: number, y: number) {
     super({
@@ -571,6 +573,30 @@ export class Player extends ex.Actor {
 
   getMaxHealth(): number {
     return this.maxHealth;
+  }
+
+  getAttack(): number {
+    return this.attack;
+  }
+
+  getStamina(): number {
+    return this.stamina;
+  }
+
+  setMaxHealth(value: number): void {
+    this.maxHealth = value;
+    // Also restore health to new max if current health is at max
+    if (this.health === this.maxHealth || this.health > this.maxHealth) {
+      this.health = this.maxHealth;
+    }
+  }
+
+  setAttack(value: number): void {
+    this.attack = value;
+  }
+
+  setStamina(value: number): void {
+    this.stamina = value;
   }
 
   isPlayerDead(): boolean {

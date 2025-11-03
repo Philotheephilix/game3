@@ -1,0 +1,16 @@
+{
+  "columns": 24,
+  "firstgid": 1249,
+  "image": "/src/assets/maps/Blacksmith.png",
+  "imageheight": 240,
+  "imagewidth": 384,
+  "margin": 0,
+  "name": "Blacksmith",
+  "spacing": 0,
+  "tilecount": 360,
+  "tileheight": 16,
+  "tilewidth": 16,
+  "type": "tileset",
+  "version": "1.10",
+  "tiledversion": "1.11.2"
+}

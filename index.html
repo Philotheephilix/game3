@@ -402,6 +402,35 @@
                 }
             } catch (e) {
                 console.error('[UI] quick play failed', e);
+        // Expose gameStarted and game to window for external access
+        window.gameStarted = false;
+        window.gameInstance = null;
+        
+        async function handlePlayGame() {
+            console.log('Play Game button clicked');
+            
+            // Check if flags were reset externally (e.g., from exit menu)
+            if (window.gameStarted === false) {
+                gameStarted = false;
+                game = null;
+            }
+            
+            // Hide the home screen
+            document.querySelector('.container').style.display = 'none';
+            document.querySelector('.background').style.display = 'none';
+            
+            // Start the game - always recreate if gameStarted is false or game is null
+            if (!gameStarted || !game) {
+                const gameModule = await import('./src/game.ts');
+                game = await gameModule.createAndStartGame();
+                gameStarted = true;
+                window.gameStarted = true;
+                window.gameInstance = game;
+            } else {
+                // If game already exists, just show it (restart the engine if it was stopped)
+                if (game && game.isRunning !== undefined && !game.isRunning()) {
+                    game.start();
+                }
             }
         }
         
